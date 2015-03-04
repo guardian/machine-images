@@ -41,3 +41,4 @@ TODO
 
  - Investigate using packers chroot builder to accelerate the build process
  - Make it create PV AMIs if that's desirable
+ - Look at using your AWS credentials from `.aws/credentials` when running locally
