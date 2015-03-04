@@ -11,11 +11,11 @@ FLAGS='-color=false'
 # set PACKER_HOME if it isn't already provided
 [ -z "${PACKER_HOME}" ] && PACKER_HOME="/opt/packer"
 
-# set BUILD_NUMBER to DEV if not in TeamCity
+# set build info to DEV if not in TeamCity
 [ -z "${BUILD_NUMBER}" ] && BUILD_NUMBER="DEV"
-
-# set BUILD_BRANCH if not in TeamCity
 [ -z "${BUILD_BRANCH}" ] && BUILD_BRANCH="DEV"
+[ -z "${BUILD_VCS_REF}" ] && BUILD_VCS_REF="DEV"
+
 
 # set BUILD_NUMBER to DEV if not in TeamCity
 BUILD_NAME=${TEAMCITY_PROJECT_NAME}-${TEAMCITY_BUILDCONF_NAME}
@@ -40,5 +40,6 @@ for packer_file in `ls *.json`; do
   ${PACKER_HOME}/packer build $FLAGS \
     -var "build_number=${BUILD_NUMBER}" -var "build_name=${BUILD_NAME}" \
     -var "build_branch=${BUILD_BRANCH}" -var "account_numbers=${ACCOUNT_NUMBERS}" \
+    -var "build_vcs_ref=${BUILD_VCS_REF}" \
     ${packer_file}
 done
