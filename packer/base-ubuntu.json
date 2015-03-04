@@ -13,7 +13,6 @@
       "region": "eu-west-1",
       "source_ami": "{{user `euw1_source_ami`}}",
       "instance_type": "t2.micro",
-      "enhanced_networking": true,
       "ssh_username": "ubuntu",
       "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
       "ami_name": "{{user `name`}}_{{user `build_number`}}_{{isotime \"2006-01-02\"}}",
