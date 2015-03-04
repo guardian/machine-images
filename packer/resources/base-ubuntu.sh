@@ -1,4 +1,4 @@
-#!/bin/bash -x
+#!/bin/bash
 # this is run as root
 
 function new_section {
@@ -28,7 +28,17 @@ new_section "Installing AWS-CFN tools"
 wget -P /root https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
 mkdir -p /root/aws-cfn-bootstrap-latest
 tar xvfz /root/aws-cfn-bootstrap-latest.tar.gz --strip-components=1 -C /root/aws-cfn-bootstrap-latest
-easy_install /root/aws-cfn-bootstrap-latest/
+# This seems to frequently fail, so run in a short loop
+LIMIT=3
+COUNT=1
+while [ $COUNT -le $LIMIT ]; do
+  echo "Attempting to install cfn-init ($COUNT/$LIMIT)..."
+  if easy_install /root/aws-cfn-bootstrap-latest/; then
+    break
+  else
+    let COUNT=COUNT+1
+  fi
+done
 
 ## Configure Amazon's NTP servers
 new_section "Configuring NTP"
