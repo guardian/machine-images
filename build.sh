@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 set -e
 # try to get build branch
 if [ -n "${TEAMCITY_BUILD_PROPERTIES_FILE}" ]; then

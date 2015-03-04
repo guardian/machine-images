@@ -15,11 +15,12 @@
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
       "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
-      "ami_name": "{{user `name`}}_{{user `build_number`}}_{{isotime \"2006-01-02\"}}",
+      "ami_name": "{{user `name`}}_{{user `build_number`}}#{{user `build_number`}}_{{isotime \"2006-01-02 15:04:05\"}}",
       "ami_description": "AMI for {{user `name`}} built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
       "tags": {
-        "Name": "{{user `build_name`}}",
+        "Name": "{{user `name`}}_{{user `build_number`}}_{{isotime \"2006-01-02 15:04:05\"}}",
+        "BuildName": "{{user `build_name`}}",
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",
         "SourceAMI":"{{user `euw1_source_ami`}}"
