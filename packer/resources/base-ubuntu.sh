@@ -13,6 +13,8 @@ new_section "Configuring extra repositories"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty universe multiverse"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty main restricted"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty-updates universe multiverse"
+# Also need the Utopic repo for the Java 8 package 
+add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ utopic universe"
 # sometimes apt-get update doesn't see the changes here, try sleeping for a moment
 sleep 1
 
@@ -25,6 +27,8 @@ apt-get --yes --force-yes install \
   git wget awscli language-pack-en build-essential python-setuptools \
   openjdk-7-jre-headless openjdk-7-jdk \
   ntp
+# Install Java 8 once we're sure Java 7 is installed
+apt-get --yes --force-yes install openjdk-8-jre-headless
 
 ## Install AWS-CFN tools
 new_section "Installing AWS-CFN tools"
