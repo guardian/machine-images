@@ -44,7 +44,7 @@ ${PACKER_HOME}/packer build $FLAGS \
   base-ubuntu.json | tee ${PACKER_OUTPUT_FILE}
 
 # Parse the Packer output to find the base Ubuntu image's AMI ID
-BASE_AMI_ID=$(awk '/amazon-ebs: AMI:/ {print $3}' ${PACKER_OUTPUT_FILE} | head -n 1)
+BASE_AMI_ID=$(awk '/eu-west-1: ami-/ {print $2}' ${PACKER_OUTPUT_FILE} | head -n 1)
 echo "Extracted AMI ID ${BASE_AMI_ID} from Packer output" 1>&2
 
 # Build the customised Ubuntu images
