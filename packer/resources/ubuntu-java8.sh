@@ -24,5 +24,5 @@ apt-get --yes --force-yes install \
 
 ## Uninstall Java 7 packages
 new_section "Uninstalling Java 7"
-apt-get --yes --force-yes install \
+apt-get --yes --force-yes remove \
   openjdk-7-jre-headless openjdk-7-jdk
