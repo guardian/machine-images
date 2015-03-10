@@ -34,12 +34,28 @@ PRISM_JSON=$(curl -s "http://prism.gutools.co.uk/sources?resource=instance&origi
 ACCOUNT_NUMBERS=$(echo ${PRISM_JSON} | jq '.data[].origin.accountNumber' | tr '\n' ',' | sed s/\"//g | sed s/,$//)
 echo "Account numbers for AMI: $ACCOUNT_NUMBERS"
 
-# now build
-for packer_file in `ls *.json`; do
+# Build the base Ubuntu image
+echo "Running packer with base-ubuntu.json" 1>&2
+PACKER_OUTPUT_FILE=$(mktemp packer-output.XXXXXX)
+${PACKER_HOME}/packer build $FLAGS \
+  -var "build_number=${BUILD_NUMBER}" -var "build_name=${BUILD_NAME}" \
+  -var "build_branch=${BUILD_BRANCH}" -var "account_numbers=${ACCOUNT_NUMBERS}" \
+  -var "build_vcs_ref=${BUILD_VCS_REF}" \
+  base-ubuntu.json | tee ${PACKER_OUTPUT_FILE}
+
+# Parse the Packer output to find the base Ubuntu image's AMI ID
+BASE_AMI_ID=$(awk '/amazon-ebs: AMI:/ {print $3}' ${PACKER_OUTPUT_FILE} | head -n 1)
+echo "Extracted AMI ID ${BASE_AMI_ID} from Packer output" 1>&2
+
+# Build the customised Ubuntu images
+for packer_file in `ls ubuntu/*.json`; do
   echo "Running packer with ${packer_file}" 1>&2
   ${PACKER_HOME}/packer build $FLAGS \
     -var "build_number=${BUILD_NUMBER}" -var "build_name=${BUILD_NAME}" \
     -var "build_branch=${BUILD_BRANCH}" -var "account_numbers=${ACCOUNT_NUMBERS}" \
-    -var "build_vcs_ref=${BUILD_VCS_REF}" \
+    -var "build_vcs_ref=${BUILD_VCS_REF}" -var "euw1_source_ami=${BASE_AMI_ID}" \
     ${packer_file}
 done
+
+# If everything went well, clean up temp files
+rm ${PACKER_OUTPUT_FILE}
