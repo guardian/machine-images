@@ -34,7 +34,9 @@ PRISM_JSON=$(curl -s "http://prism.gutools.co.uk/sources?resource=instance&origi
 ACCOUNT_NUMBERS=$(echo ${PRISM_JSON} | jq '.data[].origin.accountNumber' | tr '\n' ',' | sed s/\"//g | sed s/,$//)
 echo "Account numbers for AMI: $ACCOUNT_NUMBERS"
 
-# now build
+# This cycles round all files, but does so in serial
+# I don't seriously recommend using this - new builders should go in the same
+# file where possible
 for packer_file in `ls *.json`; do
   echo "Running packer with ${packer_file}" 1>&2
   ${PACKER_HOME}/packer build $FLAGS \

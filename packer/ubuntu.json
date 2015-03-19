@@ -1,0 +1,68 @@
+{
+  "variables": {
+    "java7_image_name": "ubuntu-trusty-java7",
+    "java8_image_name": "ubuntu-trusty-java8",
+    "build_number": "DEV",
+    "build_name": null,
+    "build_vcs_ref": "",
+    "account_numbers": "",
+    "build_branch": "DEV",
+    "euw1_source_ami": "ami-cba130bc"
+  },
+  "builders": [
+    {
+      "name": "{{user `java7_image_name`}}",
+      "type": "amazon-ebs",
+      "region": "eu-west-1",
+      "source_ami": "{{user `euw1_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
+      "ami_name": "{{user `java7_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+      "ami_description": "AMI for {{user `java7_image_name`}} built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
+      "ami_users": "{{user `account_numbers`}}",
+      "tags": {
+        "Name": "{{user `java7_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "BuildName": "{{user `build_name`}}",
+        "Build":"{{user `build_number`}}",
+        "Branch":"{{user `build_branch`}}",
+        "VCSRef":"{{user `build_vcs_ref`}}",
+        "SourceAMI":"{{user `euw1_source_ami`}}"
+      }
+    },
+    {
+      "name": "{{user `java8_image_name`}}",
+      "type": "amazon-ebs",
+      "region": "eu-west-1",
+      "source_ami": "{{user `euw1_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
+      "ami_name": "{{user `java8_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+      "ami_description": "AMI for {{user `java8_image_name`}} built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
+      "ami_users": "{{user `account_numbers`}}",
+      "tags": {
+        "Name": "{{user `java8_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "BuildName": "{{user `build_name`}}",
+        "Build":"{{user `build_number`}}",
+        "Branch":"{{user `build_branch`}}",
+        "VCSRef":"{{user `build_vcs_ref`}}",
+        "SourceAMI":"{{user `euw1_source_ami`}}"
+      }
+    }
+  ],
+
+  "provisioners" : [
+    {
+      "type": "shell",
+      "script": "resources/ubuntu-trusty.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "resources/install-java8.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'",
+      "only": ["{{user `java8_image_name`}}"]
+    }
+  ]
+}
