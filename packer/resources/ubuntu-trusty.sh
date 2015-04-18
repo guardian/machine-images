@@ -8,6 +8,8 @@ function new_section {
 }
 
 set -e
+mkdir -p /opt
+
 ## Update index and install packages
 new_section "Configuring extra repositories"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty universe multiverse"
