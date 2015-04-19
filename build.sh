@@ -1,5 +1,8 @@
-#!/bin/bash -x
+#!/bin/bash
 set -e
+
+SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
+
 # try to get build branch
 if [ -n "${TEAMCITY_BUILD_PROPERTIES_FILE}" ]; then
   CONFIG_FILE=$( grep "teamcity.configuration.properties.file=" ${TEAMCITY_BUILD_PROPERTIES_FILE} | cut -d'=' -f2 )
@@ -7,6 +10,7 @@ if [ -n "${TEAMCITY_BUILD_PROPERTIES_FILE}" ]; then
   export BUILD_VCS_REF=$( grep "build.vcs.number=" ${CONFIG_FILE} | cut -d'=' -f2 )
 fi
 
-pushd packer
-bash build.sh
-popd
+(
+  cd "${SCRIPTPATH}/packer"
+  bash build.sh
+)

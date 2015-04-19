@@ -1,15 +1,17 @@
-#!/bin/bash
+#!/bin/bash -x
 # Build packer AMI (on TeamCity host)
 
 # die if any command fails
 set -e
+
+SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 
 FLAGS='-color=false'
 # set DEBUG flag if not in TeamCity
 [ -z "${BUILD_NUMBER}" ] && FLAGS="-debug"
 
 # set PACKER_HOME if it isn't already provided
-[ -z "${PACKER_HOME}" ] && PACKER_HOME="/opt/packer"
+[ -z "${PACKER_HOME}" ] && PACKER_HOME=${SCRIPTPATH}/../packer_bin
 
 # set build info to DEV if not in TeamCity
 [ -z "${BUILD_NUMBER}" ] && BUILD_NUMBER="DEV"
