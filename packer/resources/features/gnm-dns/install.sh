@@ -8,6 +8,7 @@ if ! (dpkg -s dnsmasq 2> /dev/null > /dev/null); then
     apt-get install -y dnsmasq
 fi
 
+# Generate the config file
 PROXIES=( "10.252.63.100" "10.253.63.100" )
 DOMAINS=( "guprod.gnl" "dc1.gnm" "dc2.gnm" "dmz.gnl" "gws.gutools.co.uk" \
   "252.10.in-addr.arpa" "253.10.in-addr.arpa" "235.10.in-addr.arpa" \
@@ -24,3 +25,6 @@ for domain in ${DOMAINS[@]}; do
     echo "server=/${domain}/${proxy}" >> ${DNSMASQ_GNM_CONF}
   done
 done
+
+# Restart - in case we want to use it immediately
+service dnsmasq restart

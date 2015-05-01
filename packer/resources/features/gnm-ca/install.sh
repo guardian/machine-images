@@ -5,14 +5,14 @@
 set -e
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
-CERTIFICATE=${SCRIPTPATH}/GNM-root-cert.pem
+CERTIFICATES=${SCRIPTPATH}/*.crt
 
 # Make sure ca-certificates-java is installed
-if (dpkg -s ca-certificates-java 2> /dev/null > /dev/null); then
+if ! (dpkg -s ca-certificates-java 2> /dev/null > /dev/null); then
     sudo apt-get install -y ca-certificates-java
 fi
 
 mkdir -p /usr/local/share/ca-certificates/GNM
-cp ${CERTIFICATE} /usr/local/share/ca-certificates/GNM
+cp ${CERTIFICATES} /usr/local/share/ca-certificates/GNM
 
 update-ca-certificates
