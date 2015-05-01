@@ -7,7 +7,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-cba130bc"
+    "euw1_source_ami": "ami-2396f654"
   },
   "builders": [
     {
