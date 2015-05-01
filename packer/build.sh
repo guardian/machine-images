@@ -21,12 +21,10 @@ FLAGS='-color=false'
 BUILD_NAME=${TEAMCITY_PROJECT_NAME}-${TEAMCITY_BUILDCONF_NAME}
 [ -z "${TEAMCITY_BUILDCONF_NAME}" -o -z "${TEAMCITY_PROJECT_NAME}" ] && BUILD_NAME="unknown"
 
-# ensure that we have AWS credentials (configure in TeamCity normally)
-# note that we don't actually use them in the script, the packer command does
-if [ -z "${AWS_ACCESS_KEY}" -o -z "${AWS_SECRET_KEY}" ]
+# Copy AWS_DEFAULT_PROFILE to AWS_PROFILE (see https://github.com/mitchellh/goamz/blob/master/aws/aws.go)
+if [ -n ${AWS_DEFAULT_PROFILE+x} ]
 then
-  echo "AWS_ACCESS_KEY and AWS_SECRET_KEY environment variables must be set" 1>&2
-  exit 1
+  export AWS_PROFILE=${AWS_DEFAULT_PROFILE}
 fi
 
 # Get all the account numbers of our AWS accounts

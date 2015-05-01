@@ -30,8 +30,11 @@ Building locally
 To build locally you will need:
  - A packer installation (set the `PACKER_HOME` environment variable to the
    location of your packer binaries).
- - Amazon access and secret keys in the `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`
-   respectively.
+ - Amazon credentials, either
+  - access and secret keys in the `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`
+    respectively
+  - keys in the ~/.aws/credentials file with `AWS_DEFAULT_PROFILE` set if
+    required
 
 Run the `build.sh` in the root of the repository. When not running in
 development mode it will step through the process of image creation.
@@ -41,4 +44,3 @@ TODO
 
  - Investigate using packers chroot builder to accelerate the build process
  - Make it create PV AMIs if that's desirable
- - Look at using your AWS credentials from `.aws/credentials` when running locally
