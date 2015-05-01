@@ -4,7 +4,7 @@
 set -e
 
 # Make sure dnsmasq is installed
-if (dpkg -s dnsmasq 2> /dev/null > /dev/null); then
+if ! (dpkg -s dnsmasq 2> /dev/null > /dev/null); then
     apt-get install -y dnsmasq
 fi
 
