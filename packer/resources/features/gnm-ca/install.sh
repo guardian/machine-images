@@ -5,7 +5,6 @@
 set -e
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
-CERTIFICATES=${SCRIPTPATH}/*.crt
 
 # Make sure ca-certificates-java is installed
 if ! (dpkg -s ca-certificates-java 2> /dev/null > /dev/null); then
@@ -13,6 +12,6 @@ if ! (dpkg -s ca-certificates-java 2> /dev/null > /dev/null); then
 fi
 
 mkdir -p /usr/local/share/ca-certificates/GNM
-cp ${CERTIFICATES} /usr/local/share/ca-certificates/GNM
+cp ${SCRIPTPATH}/*.crt /usr/local/share/ca-certificates/GNM
 
 update-ca-certificates
