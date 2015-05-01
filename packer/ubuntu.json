@@ -54,6 +54,11 @@
 
   "provisioners" : [
     {
+      "type": "file",
+      "source": "resources/features",
+      "destination": "/tmp"
+    },
+    {
       "type": "shell",
       "script": "resources/ubuntu-trusty.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
@@ -63,11 +68,6 @@
       "script": "resources/install-java8.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'",
       "only": ["{{user `java8_image_name`}}"]
-    },
-    {
-      "type": "file",
-      "source": "resources/features",
-      "destination": "/opt/"
     }
   ]
 }
