@@ -27,9 +27,9 @@ at any point without checking if anyone is using it.**.
 Building locally
 ----------------
 
-To build locally you will need:
- - A packer installation (set the `PACKER_HOME` environment variable to the
-   location of your packer binaries).
+To build locally:
+ - Either run `setup.sh` (which will download packer) or set the `PACKER_HOME`
+   environment variable to the location of your packer binaries.
  - Amazon credentials, either
   - access and secret keys in the `AWS_ACCESS_KEY` and `AWS_SECRET_KEY`
     respectively
