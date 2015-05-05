@@ -10,6 +10,10 @@ if [ -n "${TEAMCITY_BUILD_PROPERTIES_FILE}" ]; then
   export BUILD_VCS_REF=$( grep "build.vcs.number=" ${CONFIG_FILE} | cut -d'=' -f2 )
 fi
 
+# install packer if needed
+bash ${SCRIPTPATH}/setup.sh
+
+# now run packer
 (
   cd "${SCRIPTPATH}/packer"
   bash build.sh
