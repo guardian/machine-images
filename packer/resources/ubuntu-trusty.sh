@@ -10,6 +10,7 @@ function new_section {
 set -e
 mkdir -p /opt
 cp -R /tmp/features /opt/
+cp -R /tmp/bin /opt/
 
 ## Update index and install packages
 new_section "Configuring extra repositories"
@@ -26,7 +27,7 @@ apt-get update
 new_section "Installing required packages"
 apt-get --yes --force-yes install \
   git wget awscli language-pack-en build-essential python-setuptools \
-  openjdk-7-jre-headless openjdk-7-jdk \
+  openjdk-7-jre-headless openjdk-7-jdk cloud-guest-utils jq \
   ntp unzip
 
 ## Install AWS-CFN tools
