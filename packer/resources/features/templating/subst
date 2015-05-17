@@ -1,11 +1,7 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # This script attempts to substitute values in templated files
 # Usage: subst -f map-file [key1=value1 ...] template
 set -e
-
-declare -A SUBS
-SUBST_FILE=""
-SED_BASE_ARGS=""
 
 function HELP {
 >&2 cat << EOF
@@ -40,70 +36,27 @@ EOF
 exit 1
 }
 
-function read_subst_file {
-  if [ -f ${1} ]; then
-    >&2 echo "Reading ${1}"
-    while read -r line || [[ -n $line ]]; do
-      key=${line%%=*}
-      value=${line#*=}
-      SUBS[$key]=$value
-      >&2 echo " >> $key = ${SUBS[$key]}"
-    done < ${1}
-  else
-    >&2 echo "File not found: ${1}"
-    exit 1
-  fi
-}
+declare SUBST_ARGS=""
+declare SED_BASE_ARGS=""
+declare SUBST_FILE=""
 
-function read_tags {
-  INSTANCE=$(ec2metadata --instance-id)
-  >&2 echo "Reading AWS tags for ${INSTANCE}"
-  ret=0
-  TAGS=`aws ec2 describe-tags --filters "Name=resource-id,Values=${INSTANCE}"` || ret=$?
-  if [ ${ret} == 0 ]; then
-    for tag in $(echo "${TAGS}" | jq -r '.Tags[] | [.Key, .Value] | join("=")'); do
-      key="tag.${tag%%=*}"
-      value=${tag#*=}
-      SUBS[$key]=$value
-      >&2 echo " >> $key = ${SUBS[$key]}"
-    done
-
-    STACK_ID=${SUBS["tag.aws:cloudformation:stack-id"]}
-
-    if [ -n "${STACK_ID}" ]; then
-      read_parameters ${STACK_ID}
-    fi
-  fi
-}
-
-function read_parameters {
-  STACK=${1}
-  >&2 echo "Reading CFN stack parameters for stack '${STACK}'"
-  ret=0
-  DESC=`aws cloudformation describe-stacks --stack-name ${STACK}` || ret=$?
-  if [ ${ret} == 0 ]; then
-    for param in $(echo "${DESC}" | jq -r '.Stacks[0].Parameters[] | [.ParameterKey, .ParameterValue] | join("=")'); do
-      key="param.${param%%=*}"
-      value=${param#*=}
-      SUBS[$key]=$value
-      >&2 echo " >> $key = ${SUBS[$key]}"
-    done
-  fi
-}
+SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
+source ${SCRIPTPATH}/../features/templating/subs.sh
 
 # Process options
 while getopts itp:f:h FLAG; do
   case $FLAG in
     i)
       SED_BASE_ARGS="-i"
+      ;;
     f)
-      read_subst_file $OPTARG
+      SUBST_ARGS="${SUBST_ARGS} -f ${OPTARG}"
       ;;
     t)
-      read_tags
+      SUBST_ARGS="${SUBST_ARGS} -t"
       ;;
     p)
-      read_parameters $OPTARG
+      SUBST_ARGS="${SUBST_ARGS} -p ${OPTARG}"
       ;;
     h)  #show help
       HELP
@@ -111,6 +64,8 @@ while getopts itp:f:h FLAG; do
   esac
 done
 shift $((OPTIND-1))
+
+eval declare -A SUBS=$(get_substitution_map ${SUBST_ARGS})
 
 # Read command line KV pairs
 while (( $# )); do
@@ -134,7 +89,7 @@ for K in "${!SUBS[@]}"; do
   sed_args="${sed_args} -e 's|@${K}@|${SUBS[$K]}|g'"
 done
 
-if (echo ${SED_BASE_ARGS} | grep '-i' > /dev/null); then
+if [ "${SED_BASE_ARGS:0:2}" == "-i" ]; then
   while (( $# )); do
     template_file=$1
     eval sed ${sed_args} ${template_file}
