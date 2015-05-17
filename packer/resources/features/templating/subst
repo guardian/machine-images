@@ -41,7 +41,7 @@ declare SED_BASE_ARGS=""
 declare SUBST_FILE=""
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
-source ${SCRIPTPATH}/../features/templating/subs.sh
+source ${SCRIPTPATH}/subs.sh
 
 # Process options
 while getopts itp:f:h FLAG; do
