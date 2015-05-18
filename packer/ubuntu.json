@@ -59,11 +59,6 @@
       "destination": "/tmp"
     },
     {
-      "type": "file",
-      "source": "resources/bin",
-      "destination": "/tmp"
-    },
-    {
       "type": "shell",
       "script": "resources/ubuntu-trusty.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"

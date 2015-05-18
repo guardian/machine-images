@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -e
-set -x
 
 function HELP {
 >&2 cat << EOF

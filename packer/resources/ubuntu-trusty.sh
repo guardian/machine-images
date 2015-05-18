@@ -10,7 +10,6 @@ function new_section {
 set -e
 mkdir -p /opt
 cp -R /tmp/features /opt/
-cp -R /tmp/bin /opt/
 
 ## Update index and install packages
 new_section "Configuring extra repositories"
