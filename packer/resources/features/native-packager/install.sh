@@ -8,11 +8,13 @@ function HELP {
 
   This script deploys a sbt-native-packager tar.gz file.
 
-    -p package    The tar.gz package file to deploy
-
     -b bucket     The S3 bucket to download the artifact from.
                   Note that the URL will be generated automatically from the
                   stack, stage and app tags.
+
+    -t extension  The file extension/type of the package to deploy
+                  (default=tar.gz). Currently knows how to deploy gzipped tar
+                  files.
 
     -u user       The user to create and deploy as
 
@@ -26,16 +28,18 @@ exit 1
 }
 
 DEFAULT_USER="ubuntu"
+DEFAULT_TYPE="tar.gz"
 USER=${DEFAULT_USER}
+TYPE=${DEFAULT_TYPE}
 
 # Process options
-while getopts b:p:u:sh FLAG; do
+while getopts b:t:u:sh FLAG; do
   case $FLAG in
     b)
       BUCKET=$OPTARG
       ;;
-    p)
-      PACKAGE=$OPTARG
+    t)
+      TYPE=$OPTARG
       ;;
     u)
       USER=$OPTARG
@@ -65,9 +69,13 @@ function sub {
   echo ${SUBS[${1}]}
 }
 
-Make user
+REGION=$(get_region)
+
+# Make user
 if [ "${USER}" != "${DEFAULT_USER}" ]; then
-  /usr/sbin/useradd -M -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
+  if ! getent passwd ${USER} >/dev/null; then
+    /usr/sbin/useradd -M -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
+  fi
 fi
 
 # create the logs dir used in the upstart script
@@ -77,20 +85,18 @@ chown ${USER} ${HOME_DIR}/logs
 # Install an application that was packaged by the sbt-native-packager
 # download
 # TODO: Use tmp file
+PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" native-package.XXXXXX)
+
 STACK=$(sub "tag.Stack")
 STAGE=$(sub "tag.Stage")
 APP=$(sub "tag.App")
 if [ -n "${BUCKET}" ]; then
-  aws s3 cp "s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP}.tgz" \
-            "/tmp/${APP}.tag.gz"
+  aws s3 cp "s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP}.${TYPE}" \
+            "${PACKAGE_FILE}" --region ${REGION}
 fi
 
-# get name
-FILENAME=${PACKAGE%/}
-APP=${FILENAME##\.tgz}
-
 # unpack
-tar -C ${HOME_DIR} -xzf ${PACKAGE}
+tar -C ${HOME_DIR} -xzf ${PACKAGE_FILE}
 chown -R ${USER} ${HOME_DIR}/${APP}
 
 # install upstart/systemd file

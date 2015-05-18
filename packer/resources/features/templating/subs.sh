@@ -36,6 +36,14 @@ function empty_aa {
   echo "'()'"
 }
 
+function get_region {
+  if [ -n "${AWS_DEFAULT_REGION}" ]; then
+    echo ${AWS_DEFAULT_REGION}
+  else
+    curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq -r .region
+  fi
+}
+
 function read_file {
   if [ -f ${1} ]; then
     >&2 echo "Reading ${1}"
@@ -48,11 +56,12 @@ function read_file {
 
 function read_tags {
   local INSTANCE=$(ec2metadata --instance-id)
-  >&2 echo "Reading AWS tags for ${INSTANCE}"
   local ret=0
-  TAGS=`aws ec2 describe-tags --filters "Name=resource-id,Values=${INSTANCE}"` || ret=$?
+  local REGION=$(get_region)
+  >&2 echo "Reading AWS tags for ${INSTANCE} in ${REGION}"
+  TAGS=`aws ec2 describe-tags --filters "Name=resource-id,Values=${INSTANCE}" --region ${REGION}` || ret=$?
   if [ ${ret} == 0 ]; then
-    (echo "${TAGS}" | jq -r '.Tags[] | [.Key, .Value] | join("=")') | props_to_aa "tag."
+    (echo "${TAGS}" | jq -r '.Tags[] | @text "\(.Key)=\(.Value)"') | props_to_aa "tag."
   else
     empty_aa
   fi
@@ -60,6 +69,7 @@ function read_tags {
 
 function read_parameters {
   local STACK DESC ret
+  local REGION=$(get_region)
   if echo "${1}" | grep -q 'tag.aws:cloudformation:stack-id'; then
     eval "local -A TAG_MAP=${1}"
     STACK=${TAG_MAP["tag.aws:cloudformation:stack-id"]}
@@ -70,11 +80,11 @@ function read_parameters {
     empty_aa
     return 0
   fi
-  >&2 echo "Reading CFN stack parameters for stack '${STACK}'"
+  >&2 echo "Reading CFN stack parameters for stack '${STACK}' in '${REGION}'"
   ret=0
-  DESC=`aws cloudformation describe-stacks --stack-name ${STACK}` || ret=$?
+  DESC=`aws cloudformation describe-stacks --stack-name ${STACK} --region ${REGION}` || ret=$?
   if [ ${ret} == 0 ]; then
-    (echo "${DESC}" | jq -r '.Stacks[0].Parameters[] | [.ParameterKey, .ParameterValue] | join("=")') | props_to_aa "param."
+    (echo "${DESC}" | jq -r '.Stacks[0].Parameters[] | @text "\(.ParameterKey)=\(.ParameterValue)"') | props_to_aa "param."
   else
     empty_aa
   fi
