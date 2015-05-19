@@ -2,6 +2,8 @@
   "variables": {
     "java7_image_name": "ubuntu-trusty-java7",
     "java8_image_name": "ubuntu-trusty-java8",
+    "euw1_region_name": "eu-west-1",
+    "euc1_region_name": "eu-central-1",
     "build_number": "DEV",
     "build_name": null,
     "build_vcs_ref": "",
@@ -12,7 +14,7 @@
   },
   "builders": [
     {
-      "name": "{{user `java7_image_name`}}",
+      "name": "{{user `java7_image_name` `euw1_region_name`}}",
       "type": "amazon-ebs",
       "region": "eu-west-1",
       "source_ami": "{{user `euw1_source_ami`}}",
@@ -32,7 +34,7 @@
       }
     },
     {
-      "name": "{{user `java8_image_name`}}",
+      "name": "{{user `java8_image_name` `euw1_region_name`}}",
       "type": "amazon-ebs",
       "region": "eu-west-1",
       "source_ami": "{{user `euw1_source_ami`}}",
@@ -52,7 +54,7 @@
       }
     },
     {
-      "name": "{{user `java7_image_name`}}",
+      "name": "{{user `java7_image_name` `euc1_region_name`}}",
       "type": "amazon-ebs",
       "region": "eu-central-1",
       "source_ami": "{{user `euc1_source_ami`}}",
@@ -72,7 +74,7 @@
       }
     },
     {
-      "name": "{{user `java8_image_name`}}",
+      "name": "{{user `java8_image_name` `euc1_region_name`}}",
       "type": "amazon-ebs",
       "region": "eu-west-1",
       "source_ami": "{{user `euw1_source_ami`}}",
