@@ -1,2 +1,2 @@
-ec2_amazon-ebs.pem
+*.pem
 packer_bin/
