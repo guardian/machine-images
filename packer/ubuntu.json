@@ -8,14 +8,14 @@
     "account_numbers": "",
     "build_branch": "DEV",
     "euw1_source_ami": "ami-b17a12c6",
-    "euc1_source_ami": "ami-4cc5fa51"
+    "use1_source_ami": "ami-7eb2a716"
   },
   "builders": [
     {
       "name": "{{user `java7_image_name`}}",
       "type": "amazon-ebs",
-      "region": "eu-central-1",
-      "source_ami": "{{user `euc1_source_ami`}}",
+      "region": "us-east-1",
+      "source_ami": "{{user `use1_source_ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
       "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
@@ -34,8 +34,8 @@
     {
       "name": "{{user `java8_image_name`}}",
       "type": "amazon-ebs",
-      "region": "eu-central-1",
-      "source_ami": "{{user `euc1_source_ami`}}",
+      "region": "us-east-1",
+      "source_ami": "{{user `use1_source_ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
       "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
