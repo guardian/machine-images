@@ -97,8 +97,7 @@ fi
 
 # unpack
 case "${TYPE}" in
-    'tar.gz')
-    'tgz')
+    'tar.gz'|'tgz')
       tar -C ${HOME_DIR} -xzf ${PACKAGE_FILE}
       ;;
     'zip')
