@@ -85,7 +85,7 @@ chown ${USER} ${HOME_DIR}/logs
 # Install an application that was packaged by the sbt-native-packager
 # download
 # TODO: Use tmp file
-PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" native-package.XXXXXX)
+PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" /tmp/native-package.XXXXXX)
 
 STACK=$(sub "tag.Stack")
 STAGE=$(sub "tag.Stage")
@@ -96,12 +96,25 @@ if [ -n "${BUCKET}" ]; then
 fi
 
 # unpack
-tar -C ${HOME_DIR} -xzf ${PACKAGE_FILE}
+case "${TYPE}" in
+    'tar.gz')
+    'tgz')
+      tar -C ${HOME_DIR} -xzf ${PACKAGE_FILE}
+      ;;
+    'zip')
+      unzip ${PACKAGE_FILE} -d ${HOME_DIR}
+      ;;
+    *)
+      echo "Unknown type: '${TYPE}'"
+      exit 1
+      ;;
+esac
+
 chown -R ${USER} ${HOME_DIR}/${APP}
 
 # install upstart/systemd file
-/opt/feature/templating/subst.sh USER=${USER} APP=${APP} \
-                                 upstart.conf.template > /etc/init/${APP}.conf
+/opt/features/templating/subst.sh USER=${USER} APP=${APP} \
+                ${SCRIPTPATH}/upstart.conf.template > /etc/init/${APP}.conf
 
 # optionally start
 if [ "${START}" == "true" ]; then
