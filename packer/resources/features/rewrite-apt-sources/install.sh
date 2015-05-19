@@ -12,7 +12,7 @@ shopt -s nullglob
 for f in /etc/apt/sources.list /etc/apt/sources.list.d/*
 do
   echo Rewriting $f
-  sed -i".bak" -r -e 's/(http(s?)):\/\/[a-z0-9-]+\.ec2\.archive\.ubuntu.com/\1:\/\/archive.ubuntu.com/g'
+  sed -i".bak" -r -e 's/(http(s?)):\/\/[a-z0-9-]+\.ec2\.archive\.ubuntu.com/\1:\/\/archive.ubuntu.com/g' "$f"
   echo Done. Backup saved at ${f}.bak
 done
 
