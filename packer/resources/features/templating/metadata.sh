@@ -1,10 +1,15 @@
 #!/usr/bin/env bash
-# This script contains functions that create a substitution map
+# This script contains functions that return metadata infomation
 # Note that some of the features of this script requires bash 4.3 or above.
 
-# Usage: get_substitution_map [-f map-file] [-p stack] [-t]
+# Usage: get_region
 #
-# This script acquires key-value pairs from various sources and returns a bash
+# Returns the current ec2 region (not available from the normal ec2metadata
+# command)
+
+# Usage: get_metadata [-f map-file] [-p stack] [-t]
+#
+# This function acquires key-value pairs from various sources and returns a bash
 # format associative array.
 #
 #   -f map-file   Reads further values from the specified map-file (in key=value
@@ -108,7 +113,7 @@ function merge_maps {
   declare -p MAP | sed -e 's/^declare -A [^=]*=//'
 }
 
-function get_substitution_map {
+function get_metadata {
   local subs=$(empty_aa)
   local OPTIND FLAG
 

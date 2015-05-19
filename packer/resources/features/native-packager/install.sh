@@ -16,7 +16,7 @@ function HELP {
                   (default=tar.gz). Currently knows how to deploy gzipped tar
                   files.
 
-    -u user       The user to create and deploy as
+    -u user       The user to create and deploy as, defaults to the 'Stack' tag.
 
     -s            Start the application after deployment
 
@@ -27,9 +27,7 @@ EOF
 exit 1
 }
 
-DEFAULT_USER="ubuntu"
 DEFAULT_TYPE="tar.gz"
-USER=${DEFAULT_USER}
 TYPE=${DEFAULT_TYPE}
 
 # Process options
@@ -54,22 +52,28 @@ while getopts b:t:u:sh FLAG; do
 done
 shift $((OPTIND-1))
 
-if [ -z "${PACKAGE}" -a -z "${BUCKET}" ]; then
-  echo "Must specify a package or S3 bucket"
+if [ -z "${BUCKET}" ]; then
+  echo "Must specify an S3 bucket"
   exit 1
 fi
 
-HOME_DIR="/home/${USER}"
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
-source ${SCRIPTPATH}/../templating/subs.sh
-eval declare -A SUBS=$(get_substitution_map -t)
+source ${SCRIPTPATH}/../templating/metadata.sh
+eval declare -A SUBS=$(get_metadata -t)
 
 function sub {
   echo ${SUBS[${1}]}
 }
-
 REGION=$(get_region)
+STACK=$(sub "tag.Stack")
+STAGE=$(sub "tag.Stage")
+APP=$(sub "tag.App")
+
+if [ -z "${USER}"]; then
+  USER=${STACK}
+fi
+HOME_DIR="/home/${USER}"
 
 # Make user
 if [ "${USER}" != "${DEFAULT_USER}" ]; then
@@ -84,12 +88,7 @@ chown ${USER} ${HOME_DIR}/logs
 
 # Install an application that was packaged by the sbt-native-packager
 # download
-# TODO: Use tmp file
 PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" /tmp/native-package.XXXXXX)
-
-STACK=$(sub "tag.Stack")
-STAGE=$(sub "tag.Stage")
-APP=$(sub "tag.App")
 if [ -n "${BUCKET}" ]; then
   aws s3 cp "s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP}.${TYPE}" \
             "${PACKAGE_FILE}" --region ${REGION}

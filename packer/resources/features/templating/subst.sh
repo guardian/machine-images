@@ -41,7 +41,7 @@ declare SED_BASE_ARGS=""
 declare SUBST_FILE=""
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
-source ${SCRIPTPATH}/subs.sh
+source ${SCRIPTPATH}/metadata.sh
 
 # Process options
 while getopts itp:f:h FLAG; do
@@ -65,7 +65,7 @@ while getopts itp:f:h FLAG; do
 done
 shift $((OPTIND-1))
 
-eval declare -A SUBS=$(get_substitution_map ${SUBST_ARGS})
+eval declare -A SUBS=$(get_metadata ${SUBST_ARGS})
 
 # Read command line KV pairs
 while (( $# )); do
