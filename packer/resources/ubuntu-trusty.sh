@@ -27,7 +27,7 @@ new_section "Installing required packages"
 apt-get --yes --force-yes install \
   git wget awscli language-pack-en build-essential python-setuptools \
   openjdk-7-jre-headless openjdk-7-jdk \
-  ntp
+  ntp unzip
 
 ## Install AWS-CFN tools
 new_section "Installing AWS-CFN tools"
