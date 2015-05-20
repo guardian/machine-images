@@ -70,3 +70,12 @@ echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit
 
 ## Setup DNS
 # TODO: Use dnsmasq to route .gnm and .gnl to our internal DNS servers
+
+## Pre-cache features
+new_section "Pre-caching features"
+for feature in /opt/features/*; do
+  if [ -e "$feature/pre-cache.sh" ]; then
+    echo "Pre-caching $(basename $feature) feature"
+    bash "$feature/pre-cache.sh"
+  fi
+do
