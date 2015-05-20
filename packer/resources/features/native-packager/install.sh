@@ -76,10 +76,8 @@ fi
 HOME_DIR="/home/${USER}"
 
 # Make user
-if [ "${USER}" != "${DEFAULT_USER}" ]; then
-  if ! getent passwd ${USER} >/dev/null; then
-    /usr/sbin/useradd -M -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
-  fi
+if ! getent passwd ${USER} >/dev/null; then
+  /usr/sbin/useradd -M -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
 fi
 
 # create the logs dir used in the upstart script
