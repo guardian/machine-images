@@ -78,4 +78,4 @@ for feature in /opt/features/*; do
     echo "Pre-caching $(basename $feature) feature"
     bash "$feature/pre-cache.sh"
   fi
-do
+done
