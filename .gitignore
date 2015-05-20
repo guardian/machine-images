@@ -1,2 +1,2 @@
-*.pem
+ec2_*.pem
 packer_bin/
