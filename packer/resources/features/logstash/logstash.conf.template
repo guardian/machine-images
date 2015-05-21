@@ -1,0 +1,16 @@
+# Upstart Logstash
+
+stop on shutdown
+
+setuid @USER@
+setgid @USER@
+
+respawn
+
+console none
+
+env HOME=/home/@USER@
+
+chdir /home/@USER@
+
+exec /opt/logstash/bin/logstash -f @CONFIGFILE@

@@ -39,6 +39,11 @@ To build locally:
 Run the `build.sh` in the root of the repository. When not running in
 development mode it will step through the process of image creation.
 
+Optional features
+-----------------
+
+Each image contains a number of optional features. See [the features README](packer/resources/features/README.md) for more details.
+
 TODO
 ----
 
