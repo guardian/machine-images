@@ -70,7 +70,7 @@ STACK=$(sub "tag.Stack")
 STAGE=$(sub "tag.Stage")
 APP=$(sub "tag.App")
 
-if [ -z "${USER}"]; then
+if [ -z "${USER}" ]; then
   USER=${STACK}
 fi
 HOME_DIR="/home/${USER}"
