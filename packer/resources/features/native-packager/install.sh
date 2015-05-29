@@ -29,6 +29,8 @@ exit 1
 
 DEFAULT_TYPE="tar.gz"
 TYPE=${DEFAULT_TYPE}
+# this is often set by the shell, make sure it is clear
+unset USER
 
 # Process options
 while getopts b:t:u:sh FLAG; do
