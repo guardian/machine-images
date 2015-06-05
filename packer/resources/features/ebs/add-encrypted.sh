@@ -14,6 +14,10 @@ function HELP {
 
     -d device     The device to make available to the instance (e.g. /dev/sdh).
 
+    -m mountpoint The fs mountpoint (will be created if necessary).
+
+    -u user       chown the mountpoint to this user.
+
     -s size       The device size.
 
     -k key-arn    Specify a customer master key to use when encrypting.
@@ -28,10 +32,16 @@ exit 1
 }
 
 # Process options
-while getopts d:s:k:t:h FLAG; do
+while getopts d:m:u:s:k:t:h FLAG; do
   case $FLAG in
     d)
       DEVICE=$OPTARG
+      ;;
+    m)
+      MOUNTPOINT=$OPTARG
+      ;;
+    u)
+      MOUNT_USER=$OPTARG
       ;;
     s)
       SIZE=$OPTARG
@@ -123,3 +133,10 @@ VOLUME_ID=$(create_volume)
 ec2_wait volume-available ${VOLUME_ID}
 attach_volume ${VOLUME_ID}
 ec2_wait volume-in-use ${VOLUME_ID}
+if [ -n "${MOUNTPOINT}" ]; then
+  mkdir -p ${MOUNTPOINT}
+  mount ${DEVICE} ${MOUNTPOINT}
+  if [ -n "${MOUNT_USER}" ]; then
+    chown ${MOUNT_USER} ${MOUNTPOINT}
+  fi
+fi
