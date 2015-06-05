@@ -68,8 +68,8 @@ rm -r ixgbevf-2.16.1.tar.gz ixgbevf-2.16.1/
 ## Ensure we don't swap unnecessarily
 echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit
 
-## Setup DNS
-# TODO: Use dnsmasq to route .gnm and .gnl to our internal DNS servers
+new_section "Configuring locale"
+locale-gen en_GB.UTF-8
 
 ## Pre-cache features
 new_section "Pre-caching features"
