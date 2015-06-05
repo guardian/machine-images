@@ -4,7 +4,7 @@ set -e
 function HELP {
 >&2 cat << EOF
 
-  Usage: ${0} -d device -s size [ -k key-arn ]
+  Usage: ${0} -d device-letter -m mountpoint -s size [-k key-arn] [-u user] [-t type]
 
   This script creates and attaches an encrypted EBS volume. This is wrapper
   around the AWS EC2 CLI and you should see the following docs for clarification
@@ -12,17 +12,22 @@ function HELP {
     http://docs.aws.amazon.com/cli/latest/reference/ec2/create-volume.html
     http://docs.aws.amazon.com/cli/latest/reference/ec2/attach-volume.html
 
-    -d device     The device to make available to the instance (e.g. /dev/sdh).
+    -d dev-letter The device letter. This should be a single character (usually
+                  h or later) that is used to identify the device. Note that the
+                  device name specified by Amazon and understood by Ubuntu are
+                  different.
+                  (e.g. Specifying h will appear as /dev/sdh in Amazon and map
+                  to /dev/xvdh under Ubuntu).
 
     -m mountpoint The fs mountpoint (will be created if necessary).
 
-    -u user       chown the mountpoint to this user.
+    -u user       [optional] chown the mountpoint to this user.
 
     -s size       The device size.
 
-    -k key-arn    Specify a customer master key to use when encrypting.
+    -k key-arn    [optional] Specify a customer master key to use when encrypting.
 
-    -t type       Specify a volume type.
+    -t type       [optional] Specify a volume type.
 
     -h            Displays this help message. No further functions are
                   performed.
@@ -35,7 +40,7 @@ exit 1
 while getopts d:m:u:s:k:t:h FLAG; do
   case $FLAG in
     d)
-      DEVICE=$OPTARG
+      DEVICE_LETTER=$OPTARG
       ;;
     m)
       MOUNTPOINT=$OPTARG
@@ -59,8 +64,8 @@ while getopts d:m:u:s:k:t:h FLAG; do
 done
 shift $((OPTIND-1))
 
-if [ -z "${DEVICE}" ]; then
-  echo "Must specify a device"
+if [ -z "${DEVICE_LETTER}" ]; then
+  echo "Must specify a device letter"
   exit 1
 fi
 
@@ -120,7 +125,7 @@ function ec2_wait {
 function attach_volume {
   local VOLUME_ID=$1
   local ret=0
-  local CMD="aws ec2 attach-volume --region ${REGION} --volume-id ${VOLUME_ID} --instance-id ${INSTANCE} --device ${DEVICE}"
+  local CMD="aws ec2 attach-volume --region ${REGION} --volume-id ${VOLUME_ID} --instance-id ${INSTANCE} --device /dev/sd${DEVICE_LETTER}"
   >&2 echo "Attaching volume: ${CMD}"
   RESULT=`${CMD}` || ret=$?
   if [ ${ret} != 0 ]; then
@@ -135,7 +140,8 @@ attach_volume ${VOLUME_ID}
 ec2_wait volume-in-use ${VOLUME_ID}
 if [ -n "${MOUNTPOINT}" ]; then
   mkdir -p ${MOUNTPOINT}
-  mount ${DEVICE} ${MOUNTPOINT}
+  mkfs -t ext4 /dev/xvd${DEVICE_LETTER}
+  mount /dev/xvd${DEVICE_LETTER} ${MOUNTPOINT}
   if [ -n "${MOUNT_USER}" ]; then
     chown ${MOUNT_USER} ${MOUNTPOINT}
   fi
