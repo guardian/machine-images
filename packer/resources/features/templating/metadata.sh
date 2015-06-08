@@ -73,14 +73,9 @@ function read_tags {
 }
 
 function read_parameters {
-  local STACK DESC ret
+  local STACK=${1}
+  local DESC ret
   local REGION=$(get_region)
-  if echo "${1}" | grep -q 'tag.aws:cloudformation:stack-id'; then
-    eval "local -A TAG_MAP=${1}"
-    STACK=${TAG_MAP["tag.aws:cloudformation:stack-id"]}
-  else
-    STACK=${1}
-  fi
   if [ -z "${STACK}" ]; then
     empty_aa
     return 0
@@ -126,8 +121,14 @@ function get_metadata {
         ;;
       t)
         tag_subs=$(read_tags)
-        param_subs=$(eval read_parameters ${tag_subs})
-        subs=$(eval merge_maps ${subs} ${tag_subs} ${param_subs})
+        if echo "${tag_subs}" | grep -q 'tag.aws:cloudformation:stack-id'; then
+          eval "local -A TAG_MAP=${1}"
+          STACK=${TAG_MAP["tag.aws:cloudformation:stack-id"]}
+          param_subs=$(eval read_parameters ${STACK})
+          subs=$(eval merge_maps ${subs} ${tag_subs} ${param_subs})
+        else
+          subs=$(eval merge_maps ${subs} ${tag_subs})
+        fi
         ;;
       p)
         param_subs=$(read_parameters $OPTARG)

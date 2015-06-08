@@ -25,12 +25,16 @@ apt-get update
 ## Install packages
 new_section "Installing required packages"
 apt-get --yes --force-yes install \
-  git wget awscli language-pack-en build-essential python-setuptools \
+  git wget language-pack-en build-essential python-setuptools \
   openjdk-7-jre-headless openjdk-7-jdk cloud-guest-utils jq \
-  ntp unzip
+  ntp unzip python3-pip
+
+## Install AWSCLI tools
+new_section "Installing latest AWSCLI"
+pip3 install awscli
 
 ## Install AWS-CFN tools
-new_section "Installing AWS-CFN tools"
+new_section "Installing latest AWS-CFN tools"
 wget -P /root https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
 mkdir -p /root/aws-cfn-bootstrap-latest
 tar xvfz /root/aws-cfn-bootstrap-latest.tar.gz --strip-components=1 -C /root/aws-cfn-bootstrap-latest
