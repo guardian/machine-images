@@ -25,6 +25,9 @@ function HELP {
 
     -s size       The device size.
 
+    -x            indicates that the created volume should be deleted on
+                  termination
+
     -k key-arn    [optional] Specify a customer master key to use when encrypting.
 
     -t type       [optional] Specify a volume type.
@@ -36,8 +39,10 @@ EOF
 exit 1
 }
 
+DELETE_ON_TERMINATION="false"
+
 # Process options
-while getopts d:m:u:s:k:t:h FLAG; do
+while getopts d:m:u:s:k:t:xh FLAG; do
   case $FLAG in
     d)
       DEVICE_LETTER=$OPTARG
@@ -56,6 +61,9 @@ while getopts d:m:u:s:k:t:h FLAG; do
       ;;
     t)
       VOLUME_TYPE=$OPTARG
+      ;;
+    x)
+      DELETE_ON_TERMINATION="true"
       ;;
     h)  #show help
       HELP
@@ -176,6 +184,19 @@ function copy_tags_from_instance {
   fi
 }
 
+function set_delete_on_termination {
+  local VOLUME=$1
+  local ret=0
+  local MAPPING="[{\"DeviceName\":\"/dev/sd${DEVICE_LETTER}\",\"Ebs\":{\"DeleteOnTermination\":${DELETE_ON_TERMINATION}}}]"
+  local CMD="aws ec2 modify-instance-attribute --region ${REGION} --instance-id ${INSTANCE} --block-device-mappings ${MAPPING}"
+  >&2 echo "Setting delete on termination flag: ${CMD}"
+  RESULT=`${CMD}` || ret=$?
+  if [ ${ret} != 0 ]; then
+    >&2 echo "Error setting flag: ${RESULT}"
+    return 1
+  fi
+}
+
 VOLUME_ID=$(create_volume)
 ec2_wait volume-available ${VOLUME_ID}
 attach_volume ${VOLUME_ID}
@@ -192,3 +213,4 @@ if [ -n "${MOUNTPOINT}" ]; then
   fi
 fi
 copy_tags_from_instance ${VOLUME_ID}
+set_delete_on_termination ${VOLUME_ID}
