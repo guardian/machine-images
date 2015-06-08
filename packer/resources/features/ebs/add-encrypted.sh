@@ -86,6 +86,14 @@ fi
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 source ${SCRIPTPATH}/../templating/metadata.sh
+eval declare -A SUBS=$(get_metadata -t)
+
+function sub {
+  echo ${SUBS[${1}]}
+}
+STACK=$(sub "tag.Stack")
+STAGE=$(sub "tag.Stage")
+APP=$(sub "tag.App")
 
 INSTANCE=$(ec2metadata --instance-id)
 REGION=$(get_region)
@@ -134,10 +142,32 @@ function attach_volume {
   fi
 }
 
+function copy_tags_from_instance {
+  local TAGS="Key=instance,Value=${INSTANCE}"
+  for key in "${!SUBS[@]}"; do
+    if [[ ${key} == tag.* ]]; then
+      tagName=${key#tag.}
+      if [[ ${tagName} != aws:* ]]; then
+        TAGS="${TAGS} Key=${tagName},Value=${SUBS[$key]}"
+      fi
+    fi
+  done
+
+  local CMD="aws ec2 create-tags --region ${REGION} --resources $@ --tags ${TAGS}"
+  >&2 echo "Copying tags: ${CMD}"
+  RESULT=`${CMD}` || ret=$?
+  if [ ${ret} != 0 ]; then
+    >&2 echo "Error copying tags: ${RESULT}"
+    return 1
+  fi
+}
+
 VOLUME_ID=$(create_volume)
 ec2_wait volume-available ${VOLUME_ID}
 attach_volume ${VOLUME_ID}
 ec2_wait volume-in-use ${VOLUME_ID}
+# Sleep to wait for the OS to process the new device
+sleep 3
 if [ -n "${MOUNTPOINT}" ]; then
   mkdir -p ${MOUNTPOINT}
   mkfs -t ext4 /dev/xvd${DEVICE_LETTER}
@@ -146,3 +176,4 @@ if [ -n "${MOUNTPOINT}" ]; then
     chown ${MOUNT_USER} ${MOUNTPOINT}
   fi
 fi
+copy_tags_from_instance ${VOLUME_ID}
