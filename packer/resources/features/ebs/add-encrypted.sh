@@ -142,6 +142,19 @@ function attach_volume {
   fi
 }
 
+function wait_for_device {
+  local DEVICE=$1
+  local counter=0
+  while [ ${counter} -lt 60 -a ! -b "${DEVICE}" ]; do
+    counter=$((counter + 1))
+    sleep 1
+  done
+  if [ ! -b "${DEVICE}" ]; then
+    echo "Device ${DEVICE} still not available after 60 seconds"
+    return 1
+  fi
+}
+
 function copy_tags_from_instance {
   local TAGS="Key=instance,Value=${INSTANCE}"
   for key in "${!SUBS[@]}"; do
@@ -153,6 +166,7 @@ function copy_tags_from_instance {
     fi
   done
 
+  local ret=0
   local CMD="aws ec2 create-tags --region ${REGION} --resources $@ --tags ${TAGS}"
   >&2 echo "Copying tags: ${CMD}"
   RESULT=`${CMD}` || ret=$?
@@ -167,11 +181,12 @@ ec2_wait volume-available ${VOLUME_ID}
 attach_volume ${VOLUME_ID}
 ec2_wait volume-in-use ${VOLUME_ID}
 # Sleep to wait for the OS to process the new device
-sleep 3
+UBUNTU_DEVICE="/dev/xvd${DEVICE_LETTER}"
+wait_for_device ${UBUNTU_DEVICE}
 if [ -n "${MOUNTPOINT}" ]; then
   mkdir -p ${MOUNTPOINT}
-  mkfs -t ext4 /dev/xvd${DEVICE_LETTER}
-  mount /dev/xvd${DEVICE_LETTER} ${MOUNTPOINT}
+  mkfs -t ext4 ${UBUNTU_DEVICE}
+  mount ${UBUNTU_DEVICE} ${MOUNTPOINT}
   if [ -n "${MOUNT_USER}" ]; then
     chown ${MOUNT_USER} ${MOUNTPOINT}
   fi
