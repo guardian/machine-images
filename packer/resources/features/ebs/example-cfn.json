@@ -1,0 +1,190 @@
+
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "Encrypted EBS Example",
+    "Parameters": {
+        "KeyName": {
+            "Description": "The EC2 Key Pair to allow SSH access to the instances",
+            "Type": "AWS::EC2::KeyPair::KeyName"
+        },
+        "VpcId": {
+            "Description": "ID of the VPC onto which to launch the application",
+            "Type": "AWS::EC2::VPC::Id"
+        },
+        "VpcSubnets": {
+            "Description": "Subnets to use in VPC",
+            "Type": "List<AWS::EC2::Subnet::Id>"
+        },
+        "MachineImagesAMI": {
+            "Description": "AMI id from the machine-images repo",
+            "Type": "String"
+        },
+        "CustomerMasterKey": {
+            "Description": "The KMS CMK to use to encrypt the EBS volume",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "ServerInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "Role"
+                    }
+                ]
+            }
+        },
+        "Role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [
+                                    "ec2.amazonaws.com"
+                                ]
+                            },
+                            "Action": [
+                                "sts:AssumeRole"
+                            ]
+                        }
+                    ]
+                },
+                "Path": "/"
+            }
+        },
+        "DescribeEC2Policy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "DescribeEC2Policy",
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "EC2:Describe*",
+                                "elasticloadbalancing:Describe*"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": "*"
+                        },
+                        {
+                            "Action": ["cloudformation:DescribeStacks"],
+                            "Effect": "Allow",
+                            "Resource": {
+                                "Ref": "AWS::StackId"
+                            }
+                        }
+                    ]
+                },
+                "Roles": [{"Ref": "Role"}]
+            }
+        },
+        "CreateEncryptedVolumePolicy": {
+          "Type": "AWS::IAM::Policy",
+          "Properties": {
+              "PolicyName": "CreateEncryptedVolumePolicy",
+              "PolicyDocument": {
+                  "Statement": [
+                      {
+                          "Action": [
+                              "ec2:CreateVolume",
+                              "ec2:AttachVolume",
+                              "ec2:CreateTags",
+                              "ec2:ModifyInstanceAttribute"
+                          ],
+                          "Effect": "Allow",
+                          "Resource": "*"
+                      },
+                      {
+                          "Action": [
+                              "kms:CreateGrant",
+                              "kms:GenerateDataKeyWithoutPlaintext",
+                              "kms:Decrypt"
+                          ],
+                          "Effect": "Allow",
+                          "Resource": { "Ref": "CustomerMasterKey"}
+                      }
+                  ]
+              },
+              "Roles": [{"Ref": "Role"}]
+          }
+        },
+        "SSHSecurityGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow SSH access from the office",
+                "VpcId": {"Ref": "VpcId"},
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "10.0.0.0/8"
+                    }
+                ]
+            }
+        },
+        "AutoscalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "VPCZoneIdentifier": {"Ref": "VpcSubnets"},
+                "LaunchConfigurationName": {
+                    "Ref": "LaunchConfig"
+                },
+                "MinSize": 1,
+                "MaxSize": 2,
+                "DesiredCapacity": 1,
+                "Cooldown": "180",
+                "HealthCheckType": "EC2",
+                "HealthCheckGracePeriod": 300,
+                "Tags": [
+                    {
+                        "Key": "Stack",
+                        "Value": "ebs-encryption",
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "App",
+                        "Value": "example",
+                        "PropagateAtLaunch": "true"
+                    }
+                ]
+            }
+        },
+        "LaunchConfig": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "KeyName": {
+                    "Ref": "KeyName"
+                },
+                "ImageId": {
+                    "Ref": "MachineImagesAMI"
+                },
+                "SecurityGroups": [
+                    {
+                        "Ref": "SSHSecurityGroup"
+                    }
+                ],
+                "InstanceType": "m3.medium",
+                "IamInstanceProfile": {
+                    "Ref": "ServerInstanceProfile"
+                },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [
+                            "",
+                            [
+                                "#!/bin/bash -ev\n",
+                                "/opt/features/ebs/add-encrypted.sh -s 80 -d h -m /data -x -k ", { "Ref": "CustomerMasterKey" }, "\n"
+                            ]
+                        ]
+                    }
+                }
+            }
+        }
+    }
+}
