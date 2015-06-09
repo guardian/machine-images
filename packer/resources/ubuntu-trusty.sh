@@ -25,9 +25,13 @@ apt-get update
 ## Install packages
 new_section "Installing required packages"
 apt-get --yes --force-yes install \
-  git wget awscli language-pack-en build-essential python-setuptools \
-  openjdk-7-jre-headless openjdk-7-jdk \
-  ntp unzip
+  git wget language-pack-en build-essential python-setuptools \
+  openjdk-7-jre-headless openjdk-7-jdk cloud-guest-utils jq \
+  ntp unzip python3-pip
+
+## Install AWSCLI tools
+new_section "Installing latest AWSCLI"
+pip3 install awscli
 
 ## Install AWS-CFN tools
 new_section "Installing AWS-CFN tools"
@@ -69,8 +73,8 @@ rm -r ixgbevf-2.16.1.tar.gz ixgbevf-2.16.1/
 ## Ensure we don't swap unnecessarily
 echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit
 
-## Setup DNS
-# TODO: Use dnsmasq to route .gnm and .gnl to our internal DNS servers
+new_section "Configuring locale"
+locale-gen en_GB.UTF-8
 
 ## Pre-cache features
 new_section "Pre-caching features"

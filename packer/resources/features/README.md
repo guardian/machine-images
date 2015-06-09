@@ -1,8 +1,13 @@
-# Features
+# Machine Image Features
 
 This directory holds optional features that are made available on all images.
 
 Features are opt-in - you can selectively enable them at machine boot time according to your needs.
+
+For example - you might want to configure DNS differently. This is not something
+that everyone will want (that will be potentially confusing for users of the
+image), but it is useful to have in the machine image so it can be trivially
+configured when you do want it.
 
 ## Enabling a feature
 
