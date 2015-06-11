@@ -18,6 +18,10 @@ function HELP {
 
     -u user       The user to create and deploy as, defaults to the 'Stack' tag.
 
+    -a app        The name of the native-package app. This defaults to the
+                  'App' tag but can be overriden here. It should match the app
+                  name in the SBT build config.
+
     -s            Start the application after deployment
 
     -h            Displays this help message. No further functions are
@@ -33,7 +37,7 @@ TYPE=${DEFAULT_TYPE}
 unset USER
 
 # Process options
-while getopts b:t:u:sh FLAG; do
+while getopts b:t:u:a:sh FLAG; do
   case $FLAG in
     b)
       BUCKET=$OPTARG
@@ -43,6 +47,9 @@ while getopts b:t:u:sh FLAG; do
       ;;
     u)
       USER=$OPTARG
+      ;;
+    a)
+      TARBALL_APP=$OPTARG
       ;;
     s)
       START="true"
@@ -77,6 +84,10 @@ if [ -z "${USER}" ]; then
 fi
 HOME_DIR="/home/${USER}"
 
+if [ -z "${TARBALL_APP}" ]; then
+  TARBALL_APP=${APP}
+fi
+
 # Make user
 if ! getent passwd ${USER} >/dev/null; then
   /usr/sbin/useradd -M -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
@@ -108,10 +119,10 @@ case "${TYPE}" in
       ;;
 esac
 
-chown -R ${USER} ${HOME_DIR}/${APP}
+chown -R ${USER} ${HOME_DIR}/${TARBALL_DIR}
 
 # install upstart/systemd file
-/opt/features/templating/subst.sh USER=${USER} APP=${APP} \
+/opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
                 ${SCRIPTPATH}/upstart.conf.template > /etc/init/${APP}.conf
 
 # optionally start
