@@ -6,6 +6,10 @@ set -e
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 
+BUILD_IMAGE=$1
+# Build default.json unless overridden on command line
+[ -z "${BUILD_IMAGE}" ] && BUILD_IMAGE="default"
+
 FLAGS='-color=false'
 # set DEBUG flag if not in TeamCity
 [ -z "${BUILD_NUMBER}" ] && FLAGS="-debug"
@@ -34,14 +38,17 @@ PRISM_JSON=$(curl -s "http://prism.gutools.co.uk/sources?resource=instance&origi
 ACCOUNT_NUMBERS=$(echo ${PRISM_JSON} | jq '.data[].origin.accountNumber' | tr '\n' ',' | sed s/\"//g | sed s/,$//)
 echo "Account numbers for AMI: $ACCOUNT_NUMBERS"
 
-# This cycles round all files, but does so in serial
-# I don't seriously recommend using this - new builders should go in the same
-# file where possible
-for packer_file in `ls *.json`; do
-  echo "Running packer with ${packer_file}" 1>&2
-  ${PACKER_HOME}/packer build $FLAGS \
-    -var "build_number=${BUILD_NUMBER}" -var "build_name=${BUILD_NAME}" \
-    -var "build_branch=${BUILD_BRANCH}" -var "account_numbers=${ACCOUNT_NUMBERS}" \
-    -var "build_vcs_ref=${BUILD_VCS_REF}" \
-    ${packer_file}
-done
+ls
+packer_file="${BUILD_IMAGE}.json"
+if [ ! -e ${packer_file} ]
+then
+  echo "Packer file ${packer_file} not found." 1>&2
+  exit 1
+fi
+
+echo "Running packer with ${packer_file}" 1>&2
+${PACKER_HOME}/packer build $FLAGS \
+  -var "build_number=${BUILD_NUMBER}" -var "build_name=${BUILD_NAME}" \
+  -var "build_branch=${BUILD_BRANCH}" -var "account_numbers=${ACCOUNT_NUMBERS}" \
+  -var "build_vcs_ref=${BUILD_VCS_REF}" \
+  ${packer_file}

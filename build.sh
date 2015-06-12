@@ -3,6 +3,8 @@ set -e
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 
+BUILD_IMAGE=$1
+
 # try to get build branch
 if [ -n "${TEAMCITY_BUILD_PROPERTIES_FILE}" ]; then
   CONFIG_FILE=$( grep "teamcity.configuration.properties.file=" ${TEAMCITY_BUILD_PROPERTIES_FILE} | cut -d'=' -f2 )
@@ -16,5 +18,5 @@ bash ${SCRIPTPATH}/setup.sh
 # now run packer
 (
   cd "${SCRIPTPATH}/packer"
-  bash build.sh
+  bash build.sh $BUILD_IMAGE
 )
