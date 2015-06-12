@@ -75,12 +75,3 @@ echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit
 
 new_section "Configuring locale"
 locale-gen en_GB.UTF-8
-
-## Pre-cache features
-new_section "Pre-caching features"
-for feature in /opt/features/*; do
-  if [ -e "$feature/pre-cache.sh" ]; then
-    echo "Pre-caching $(basename $feature) feature"
-    bash "$feature/pre-cache.sh"
-  fi
-done

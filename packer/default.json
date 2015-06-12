@@ -65,6 +65,11 @@
     },
     {
       "type": "shell",
+      "script": "resources/pre-cache.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    },
+    {
+      "type": "shell",
       "script": "resources/install-java8.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'",
       "only": ["{{user `java8_image_name`}}"]
