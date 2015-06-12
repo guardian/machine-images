@@ -43,11 +43,6 @@
     },
     {
       "type": "shell",
-      "script": "resources/install-java8.sh",
-      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
-    },
-    {
-      "type": "shell",
       "script": "resources/features/elk-stack/install.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
     }
