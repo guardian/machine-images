@@ -38,7 +38,6 @@ PRISM_JSON=$(curl -s "http://prism.gutools.co.uk/sources?resource=instance&origi
 ACCOUNT_NUMBERS=$(echo ${PRISM_JSON} | jq '.data[].origin.accountNumber' | tr '\n' ',' | sed s/\"//g | sed s/,$//)
 echo "Account numbers for AMI: $ACCOUNT_NUMBERS"
 
-ls
 packer_file="${BUILD_IMAGE}.json"
 if [ ! -e ${packer_file} ]
 then
