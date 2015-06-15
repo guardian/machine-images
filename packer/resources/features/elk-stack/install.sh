@@ -55,6 +55,9 @@ useradd -M -r -U -s /bin/false -d /opt/kibana kibana
 mkdir /var/log/kibana
 chown kibana:kibana /var/log/kibana
 
+# Install Kibana ES index backup script
+cp $FEATURE_ROOT/kibana-index-backup /etc/cron.daily
+
 # Install Google Auth Proxy
 mkdir /opt/oauth2_proxy
 useradd -M -r -U -s /bin/false -d /opt/oauth2_proxy oauth2-proxy
