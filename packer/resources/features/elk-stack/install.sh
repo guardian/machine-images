@@ -6,7 +6,7 @@
 set -e
 
 FEATURE_ROOT=/opt/features/elk-stack
-KIBANA_VERSION=4.0.2
+KIBANA_VERSION=4.1.0
 
 ## Add repositories we are going to use
 wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
