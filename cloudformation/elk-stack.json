@@ -1,0 +1,502 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "ELK Stack",
+
+    "Parameters": {
+        "App": {
+            "Description": "App applied as a tag",
+            "Type": "String",
+            "Default": "elk"
+        },
+        "Stack": {
+            "Description": "Stack applied as a tag",
+            "Type": "String"
+        },
+        "KeyName": {
+            "Description": "Name of an existing EC2 KeyPair for SSH access",
+            "Type": "String",
+            "Default": "bootstrap"
+        },
+        "Stage": {
+            "Description": "Stage applied as a tag",
+            "Type": "String",
+            "Default": "PROD",
+            "AllowedValues": [ "PROD", "CODE" ],
+            "ConstraintDescription": "must be a valid stage eg. PROD, CODE"
+        },
+        "Capacity": {
+            "Description": "Autoscale Size",
+            "Type": "Number",
+            "Default": "1",
+            "MinValue": 1,
+            "MaxValue": 12
+        },
+        "InstanceType": {
+            "Description": "EC2 instance type",
+            "Type": "String",
+            "Default": "m3.large",
+            "AllowedValues": [
+                "m3.medium",
+                "m3.large",
+                "m3.xlarge",
+                "m3.2xlarge"
+            ],
+            "ConstraintDescription": "must be a valid EC2 instance type"
+        },
+        "GoogleOAuthClientId": {
+            "Description": "Google OAuth 2.0 Client ID",
+            "Type": "String"
+        },
+        "GoogleOAuthClientSecret": {
+            "Description": "Google OAuth 2.0 Client Secret",
+            "Type": "String"
+        },
+        "GoogleOAuthCookieSecret": {
+            "Description": "Google OAuth 2.0 Cookie Secret",
+            "Type": "String"
+        },
+        "GoogleAuthDomain": {
+          "Description": "The allowed domain for authenticated users",
+          "Type": "String"
+        },
+        "VpcId": {
+            "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
+            "Type": "String"
+        },
+        "PublicVpcSubnets" : {
+            "Description": "Subnets to use in VPC for public ELB eg. subnet-abcd1234",
+            "Type": "CommaDelimitedList"
+        },
+        "PrivateVpcSubnets" : {
+            "Description": "Subnets to use in VPC for instances eg. subnet-abcd1234",
+            "Type": "CommaDelimitedList"
+        },
+        "PackerAMI": {
+            "Description": "The AMI produced by the elk.json packer build in github.com/guardian/elk-stack",
+            "Type": "String"
+        },
+        "Hostname": {
+            "Description": "The public hostname to be used - if blank, then the public load balancer name will be used",
+            "Type": "String",
+            "Default": ""
+        },
+        "SSLCertificateId": {
+          "Description": "ARN of the SSL certificate for *.gutools.co.uk",
+          "Type": "String",
+          "Default": "arn:aws:iam::743583969668:server-certificate/sites.gutools.co.uk-exp2015-10-20"
+        },
+        "SnapshotBucket": {
+            "Description": "The name of the S3 bucket to configure for creating and restoring snapshots",
+            "Type": "String",
+            "Default": ""
+        },
+        "CustomerMasterKey": {
+            "Description": "The KMS CMK to use to encrypt the EBS volume",
+            "Type": "String"
+        }
+    },
+
+    "Conditions": {
+        "HostnameSpecified": {"Fn::Not": [{"Fn::Equals": [{"Ref": "Hostname"}, ""]}]},
+        "SnapshotBucketSpecified": {"Fn::Not": [{"Fn::Equals": [{"Ref": "SnapshotBucket"}, ""]}]}
+    },
+
+    "Mappings" : {
+        "AWSInstanceType2Memory" : {
+            "m3.medium"   : { "Memory" : "3840" },
+            "m3.large"    : { "Memory" : "7680" },
+            "m3.xlarge"   : { "Memory" : "15360" },
+            "m3.2xlarge"  : { "Memory" : "30720" }
+        }
+    },
+
+    "Resources": {
+
+        "ExtLB": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "CrossZone": true,
+                "Listeners": [
+                    {
+                        "Protocol": "HTTPS",
+                        "LoadBalancerPort": "443",
+                        "InstancePort": "4180",
+                        "SSLCertificateId": { "Ref": "SSLCertificateId" }
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": "HTTP:4180/ping",
+                    "Timeout": "10",
+                    "Interval": "20",
+                    "UnhealthyThreshold": "10",
+                    "HealthyThreshold": "2"
+                },
+                "Subnets": { "Ref": "PublicVpcSubnets" },
+                "SecurityGroups": [
+                    { "Ref": "ExtLBSG" }
+                ]
+            }
+        },
+
+        "IntLB": {
+            "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+            "Properties": {
+                "Scheme": "internal",
+                "CrossZone": true,
+                "Listeners": [
+                    {
+                        "Protocol": "TCP",
+                        "LoadBalancerPort": "6379",
+                        "InstancePort": "6379"
+                    }
+                ],
+                "HealthCheck": {
+                    "Target": "TCP:6379",
+                    "Timeout": "10",
+                    "Interval": "20",
+                    "UnhealthyThreshold": "10",
+                    "HealthyThreshold": "2"
+                },
+                "Subnets": { "Ref": "PrivateVpcSubnets" },
+                "SecurityGroups": [
+                    { "Ref": "IntLBSG" }
+                ]
+            }
+        },
+
+        "AutoscalingGroup": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AvailabilityZones": { "Fn::GetAZs": "" },
+                "VPCZoneIdentifier": { "Ref": "PrivateVpcSubnets" },
+                "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+                "MinSize": { "Ref": "Capacity" },
+                "MaxSize": "12",
+                "DesiredCapacity": { "Ref": "Capacity" },
+                "HealthCheckType": "ELB",
+                "HealthCheckGracePeriod": 300,
+                "LoadBalancerNames": [ { "Ref": "ExtLB" }, { "Ref": "IntLB" } ],
+                "Tags": [
+                    {
+                        "Key": "Stage",
+                        "Value": { "Ref": "Stage" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Stack",
+                        "Value": { "Ref": "Stack" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "App",
+                        "Value": { "Ref": "App" },
+                        "PropagateAtLaunch": "true"
+                    },
+                    {
+                        "Key": "Name",
+                        "Value": { "Fn::Join": [ "", [ { "Ref": "App" }, "-", { "Ref": "Stage" } ] ] },
+                        "PropagateAtLaunch": "true"
+                    }
+                ]
+            }
+        },
+
+        "LaunchConfig": {
+            "Type": "AWS::AutoScaling::LaunchConfiguration",
+            "Properties": {
+                "ImageId": { "Ref": "PackerAMI" },
+                "SecurityGroups": [ { "Ref": "SecGroup" }, { "Ref": "ExtLBSG" }, { "Ref": "IntLBSG" } ],
+                "InstanceType": { "Ref": "InstanceType" },
+                "IamInstanceProfile": { "Ref": "InstanceProfile" },
+                "AssociatePublicIpAddress": "False",
+                "KeyName": { "Ref": "KeyName" },
+                "UserData": {
+                    "Fn::Base64": {
+                        "Fn::Join": [ "\n", [
+                            "#!/bin/bash -ev",
+                            { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /data -x -k ", { "Ref": "CustomerMasterKey" }] ] },
+                            "[ -d /data ] || mkdir /data",
+                            "echo '/dev/xvdf    /data    ext4    defaults,nofail    0 2' >> /etc/fstab",
+                            "chown elasticsearch /data",
+                            { "Fn::Join": [ "", [ "MINIMUM_NODES=$(expr ", { "Ref": "Capacity" }, " / 2 + 1)" ] ] },
+
+                            { "Fn::Join": [ "", [ "sed",
+                                " -e 's,@@ES_CLUSTER_NAME,", { "Ref": "App" }, "-", { "Ref": "Stage" }, ",g'",
+                                " -e 's,@@REGION,", { "Ref": "AWS::Region" }, ",g'",
+                                " -e 's,@@STACK,", { "Ref": "Stack" }, ",g'",
+                                " -e 's,@@APP,", { "Ref": "App" }, ",g'",
+                                " -e \"s,@@MINIMUM_NODES,${MINIMUM_NODES},g\"",
+                                " -e \"s,@@MINIMUM_NODES,${MINIMUM_NODES},g\"",
+                                " /etc/elasticsearch/elasticsearch.yml.template > /etc/elasticsearch/elasticsearch.yml" ] ] },
+
+                            { "Fn::Join": [ "", [ "sed",
+                                " -i -e \"s,@@ES_HEAP_SIZE,$((",
+                                { "Fn::FindInMap" : [ "AWSInstanceType2Memory", { "Ref" : "InstanceType" }, "Memory" ]}
+                                , "/2))m,g\"",
+                                " /etc/init/elasticsearch.conf" ] ] },
+
+                            { "Fn::Join": [ "", [ "sed",
+                                " -i -e \"s,LS_HEAP_SIZE=.*,LS_HEAP_SIZE='$((",
+                                { "Fn::FindInMap" : [ "AWSInstanceType2Memory", { "Ref" : "InstanceType" }, "Memory" ]}
+                                , "/4))m',g\"",
+                                " /etc/init/logstash.conf" ] ] },
+
+                            { "Fn::Join": [ "", [ "sed",
+                                " -i -e 's,@@DOMAIN_NAME,", {"Fn::If": ["HostnameSpecified",
+                                      { "Ref": "Hostname" },
+                                      { "Fn::GetAtt": [ "ExtLB", "DNSName" ]}
+                                  ]}, ",g'",
+                                " -e 's,@@CLIENT_ID,", { "Ref": "GoogleOAuthClientId" }, ",g'",
+                                " -e 's,@@CLIENT_SECRET,", { "Ref": "GoogleOAuthClientSecret" }, ",g'",
+                                " -e 's,@@COOKIE_SECRET,", { "Ref": "GoogleOAuthCookieSecret" }, ",g'",
+                                " -e 's,@@ALLOWED_DOMAIN,", { "Ref": "GoogleAuthDomain" }, ",g'",
+                                " /etc/init/oauth2-proxy.conf" ] ] },
+
+                            "service elasticsearch start",
+                            "service logstash restart",
+                            "service kibana restart",
+                            "service oauth2-proxy restart",
+
+                            "sleep 120",
+                            "if curl -s -XGET 'http://localhost:9200/_snapshot/_all' | grep -q s3_snapshot; then",
+                            "  echo 'S3 Repository s3_snapshot exists'",
+                            "else",
+                            "  echo 'Creating S3 Repository: s3_snapshot'",
+                            "curl -XPUT 'http://localhost:9200/_snapshot/s3_backup' -d '{",
+                            "  \"type\": \"s3\",",
+                            "  \"settings\": {",
+                            { "Fn::Join": [ "", ["    \"bucket\": \"", { "Ref": "SnapshotBucket"}, "\","] ] },
+                            { "Fn::Join": [ "", ["    \"region\": \"", { "Ref": "AWS::Region" }, "\""] ] },
+                            "  }",
+                            "}'",
+                            "fi"
+                        ] ]
+                    }
+                }
+            }
+        },
+
+        "ExtLBSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": { "Ref": "VpcId" },
+                "GroupDescription": "Allow access to kibana on public ELB from internet",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "443",
+                        "ToPort": "443",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4180",
+                        "ToPort": "4180",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
+        "IntLBSG": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "VpcId": { "Ref": "VpcId" },
+                "GroupDescription": "Allow logstash messages to internal ELB",
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ],
+                "SecurityGroupEgress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "CidrIp": "0.0.0.0/0"
+                    }
+                ]
+            }
+        },
+
+        "SecGroup": {
+            "Type": "AWS::EC2::SecurityGroup",
+            "Properties": {
+                "GroupDescription": "Allow kibana from public and logstash from internal ELBs",
+                "VpcId": { "Ref": "VpcId" },
+                "SecurityGroupIngress": [
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "6379",
+                        "ToPort": "6379",
+                        "SourceSecurityGroupId": { "Ref": "IntLBSG" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "4180",
+                        "ToPort": "4180",
+                        "SourceSecurityGroupId": { "Ref": "ExtLBSG" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "22",
+                        "ToPort": "22",
+                        "CidrIp": "10.0.0.0/8"
+                    },
+                    {
+                        "IpProtocol": "icmp",
+                        "FromPort": "-1",
+                        "ToPort": "-1",
+                        "CidrIp": "10.0.0.0/8"
+                    }
+                ]
+            }
+        },
+
+        "SecGroupIngress": {
+            "Type": "AWS::EC2::SecurityGroupIngress",
+            "Properties": {
+                "GroupId": { "Fn::GetAtt": [ "SecGroup", "GroupId" ] },
+                "IpProtocol": "tcp",
+                "FromPort": "9300",
+                "ToPort": "9305",
+                "SourceSecurityGroupId": { "Fn::GetAtt": [ "SecGroup", "GroupId" ] }
+            }
+        },
+
+        "Role": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": [ "ec2.amazonaws.com" ]
+                            }
+                        }
+                    ]
+                }
+            }
+        },
+
+        "DescribeInstancesPolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName":"DescribeInstances",
+                "PolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": "ec2:DescribeInstances",
+                            "Effect": "Allow",
+                            "Resource": "*"
+                        }
+                    ]
+                },
+                "Roles": [{"Ref": "Role"}]
+            }
+        },
+
+        "CreateEncryptedVolumePolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "CreateEncryptedVolumePolicy",
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": [
+                                "ec2:CreateVolume",
+                                "ec2:AttachVolume",
+                                "ec2:CreateTags",
+                                "ec2:DescribeTags",
+                                "ec2:DescribeVolumes",
+                                "ec2:ModifyInstanceAttribute"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": "*"
+                        },
+                        {
+                            "Action": [
+                                "kms:CreateGrant",
+                                "kms:GenerateDataKeyWithoutPlaintext",
+                                "kms:Decrypt"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": { "Ref": "CustomerMasterKey"}
+                        }
+                    ]
+                },
+                "Roles": [{"Ref": "Role"}]
+            }
+        },
+
+        "SnapshotBucketPolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Condition" : "SnapshotBucketSpecified",
+            "Properties": {
+                "PolicyName":"SnapshotBucketPolicy",
+                "PolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [
+                        {
+                            "Action": [
+                                "s3:ListBucket"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                              { "Fn::Join": [ "",
+                                [ "arn:aws:s3:::", { "Ref" : "SnapshotBucket"} ]
+                              ] }
+                            ]
+                        },
+                        {
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:PutObject",
+                                "s3:DeleteObject"
+                            ],
+                            "Effect": "Allow",
+                            "Resource": [
+                              { "Fn::Join": [ "",
+                                [ "arn:aws:s3:::", { "Ref" : "SnapshotBucket"}, "/*" ]
+                              ] }
+                            ]
+                        }
+                    ]
+                },
+                "Roles": [{"Ref": "Role"}]
+            }
+        },
+
+        "InstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [ { "Ref": "Role" } ]
+            }
+        }
+    },
+
+    "Outputs": {
+        "LogstashEndpoint": {
+            "Value": { "Fn::Join": ["", [ { "Fn::GetAtt": [ "IntLB", "DNSName" ]}, ":6379"]] },
+            "Description": "Logging endpoint for Logstash TCP input"
+        },
+        "GoogleOAuthRedirectUrl": {
+            "Value": { "Fn::Join": ["", ["https://", {
+                "Fn::If": ["HostnameSpecified",
+                    { "Ref": "Hostname" },
+                    { "Fn::GetAtt": [ "ExtLB", "DNSName" ]}
+            ]}, "/oauth2/callback"]] },
+            "Description": "Redirect URL for the Google Developers Console"
+        }
+    }
+}
