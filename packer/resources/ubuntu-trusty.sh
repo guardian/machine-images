@@ -34,16 +34,17 @@ new_section "Installing latest AWSCLI"
 pip3 install awscli
 
 ## Install AWS-CFN tools
-new_section "Installing latest AWS-CFN tools"
-wget -P /root https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
-mkdir -p /root/aws-cfn-bootstrap-latest
-tar xvfz /root/aws-cfn-bootstrap-latest.tar.gz --strip-components=1 -C /root/aws-cfn-bootstrap-latest
+new_section "Installing AWS-CFN tools"
+wget -P /tmp https://s3.amazonaws.com/cloudformation-examples/aws-cfn-bootstrap-latest.tar.gz
+mkdir -p /tmp/aws-cfn-bootstrap-latest
+tar xvfz /tmp/aws-cfn-bootstrap-latest.tar.gz --strip-components=1 -C /tmp/aws-cfn-bootstrap-latest
 # This seems to frequently fail, so run in a short loop
 LIMIT=3
 COUNT=1
 while [ $COUNT -le $LIMIT ]; do
   echo "Attempting to install cfn-init ($COUNT/$LIMIT)..."
-  if easy_install /root/aws-cfn-bootstrap-latest/; then
+  if easy_install /tmp/aws-cfn-bootstrap-latest/; then
+    rm -fr /tmp/aws-cfn-bootstrap-latest
     break
   else
     let COUNT=COUNT+1
@@ -74,12 +75,3 @@ echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit
 
 new_section "Configuring locale"
 locale-gen en_GB.UTF-8
-
-## Pre-cache features
-new_section "Pre-caching features"
-for feature in /opt/features/*; do
-  if [ -e "$feature/pre-cache.sh" ]; then
-    echo "Pre-caching $(basename $feature) feature"
-    bash "$feature/pre-cache.sh"
-  fi
-done
