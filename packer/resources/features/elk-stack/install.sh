@@ -41,6 +41,7 @@ EOM
 cp $FEATURE_ROOT/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml.template
 
 ## Install logstash config
+cp $FEATURE_ROOT/elasticsearch-template.json /etc/logstash/elasticsearch-template.json
 cp $FEATURE_ROOT/logstash-indexer.conf /etc/logstash/conf.d/logstash-indexer.conf
 
 ## Install logstash plugins
@@ -50,7 +51,7 @@ su - logstash -s /bin/sh -c '/opt/logstash/bin/plugin install logstash-input-kin
 wget https://download.elastic.co/kibana/kibana/kibana-${KIBANA_VERSION}-linux-x64.tar.gz -O /tmp/kibana-${KIBANA_VERSION}-linux-x64.tar.gz
 tar xf /tmp/kibana-${KIBANA_VERSION}-linux-x64.tar.gz -C /opt
 mv /opt/kibana-${KIBANA_VERSION}-linux-x64 /opt/kibana
- 
+
 useradd -M -r -U -s /bin/false -d /opt/kibana kibana
 mkdir /var/log/kibana
 chown kibana:kibana /var/log/kibana
