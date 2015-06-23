@@ -18,7 +18,18 @@ sleep 1
 ## Update index and install packages
 apt-get update
 apt-get --yes --force-yes install ruby ruby-dev logstash elasticsearch=1.4.4 \
-    nodejs python-pip golang
+    nodejs python-pip golang libwww-perl libdatetime-perl
+
+## Install Cloudwatch monitoring scripts
+wget "http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip" -O /tmp/CloudWatchMonitoringScripts.zip
+unzip /tmp/CloudWatchMonitoringScripts.zip -d /tmp/
+rm /tmp/CloudWatchMonitoringScripts.zip
+mv /tmp/aws-scripts-mon /usr/local/
+
+# Add disk space cron job
+crontab -u root - << EOM
+*/5 * * * * /usr/local/aws-scripts-mon/mon-put-instance-data.pl --disk-space-avail --mem-avail --disk-path=/ --disk-path=/data --auto-scaling --from-cron
+EOM
 
 ## Install Elasticsearch plugins
 /usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-cloud-aws/2.4.2
