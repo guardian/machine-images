@@ -78,14 +78,20 @@ wget https://github.com/bitly/oauth2_proxy/releases/download/v1.1.1/google_auth_
 tar -zxf google_auth_proxy-1.1.1.linux-amd64.go1.4.2.tar.gz
 mv /tmp/google_auth_proxy-1.1.1.linux-amd64.go1.4.2/google_auth_proxy /opt/oauth2_proxy/oauth2_proxy
 
+## Install NGINX config
+cp $FEATURE_ROOT/nginx-config /etc/nginx/sites-available/default
+
 ## Remove existing init.d config for elasticsearch
 rm /etc/init.d/elasticsearch
 rm /etc/init.d/logstash
+rm /etc/init.d/nginx
 update-rc.d elasticsearch remove
 update-rc.d logstash remove
+update-rc.d nginx remove
 
 ## Install upstart configuration
 cp $FEATURE_ROOT/upstart-elasticsearch.conf /etc/init/elasticsearch.conf
 cp $FEATURE_ROOT/upstart-logstash.conf /etc/init/logstash.conf
 cp $FEATURE_ROOT/upstart-kibana4.conf /etc/init/kibana.conf
-cp $FEATURE_ROOT/upstart-oauth2-proxy.conf  /etc/init/oauth2-proxy.conf
+cp $FEATURE_ROOT/upstart-oauth2-proxy.conf /etc/init/oauth2-proxy.conf
+cp $FEATURE_ROOT/upstart-nginx.conf /etc/init/nginx.conf
