@@ -6,6 +6,9 @@
 set -e
 
 FEATURE_ROOT=/opt/features/elk-stack
+
+LOGSTASH_VERSION=1.5.1
+ELASTICSEARCH_VERSION=1.5.1
 KIBANA_VERSION=4.1.0
 
 ## Add repositories we are going to use
@@ -17,8 +20,9 @@ sleep 1
 
 ## Update index and install packages
 apt-get update
-apt-get --yes --force-yes install ruby ruby-dev logstash elasticsearch=1.4.4 \
-    nodejs python-pip golang libwww-perl libdatetime-perl nginx
+apt-get --yes --force-yes install ruby ruby-dev python-pip \
+    golang libwww-perl libdatetime-perl nginx \
+    logstash=$LOGSTASH_VERSION elasticsearch=$ELASTICSEARCH_VERSION \
 
 ## Install Cloudwatch monitoring scripts
 wget "http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip" -O /tmp/CloudWatchMonitoringScripts.zip
