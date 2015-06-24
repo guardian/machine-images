@@ -7,13 +7,11 @@ set -e
 
 FEATURE_ROOT=/opt/features/elk-stack
 
-LOGSTASH_VERSION=1.5.1
-ELASTICSEARCH_VERSION=1.5.2
 KIBANA_VERSION=4.1.0
 
 ## Add repositories we are going to use
 wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
-echo "deb http://packages.elastic.co/elasticsearch/1.4/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
+echo "deb http://packages.elastic.co/elasticsearch/1.5/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
 echo "deb http://packages.elastic.co/logstash/1.5/debian stable main" > /etc/apt/sources.list.d/logstash.list
 add-apt-repository -y ppa:chris-lea/node.js
 sleep 1
@@ -22,7 +20,7 @@ sleep 1
 apt-get update
 apt-get --yes --force-yes install ruby ruby-dev python-pip \
     golang libwww-perl libdatetime-perl nginx \
-    logstash=$LOGSTASH_VERSION elasticsearch=$ELASTICSEARCH_VERSION \
+    logstash elasticsearch
 
 ## Install Cloudwatch monitoring scripts
 wget "http://aws-cloudwatch.s3.amazonaws.com/downloads/CloudWatchMonitoringScripts-1.2.1.zip" -O /tmp/CloudWatchMonitoringScripts.zip
