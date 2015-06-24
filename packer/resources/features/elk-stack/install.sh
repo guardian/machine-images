@@ -8,7 +8,7 @@ set -e
 FEATURE_ROOT=/opt/features/elk-stack
 
 LOGSTASH_VERSION=1.5.1
-ELASTICSEARCH_VERSION=1.5.1
+ELASTICSEARCH_VERSION=1.5.2
 KIBANA_VERSION=4.1.0
 
 ## Add repositories we are going to use
