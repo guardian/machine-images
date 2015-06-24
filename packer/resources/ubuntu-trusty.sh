@@ -16,6 +16,7 @@ new_section "Configuring extra repositories"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty universe multiverse"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty main restricted"
 add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty-updates universe multiverse"
+add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty-proposed universe multiverse"
 # sometimes apt-get update doesn't see the changes here, try sleeping for a moment
 sleep 1
 
