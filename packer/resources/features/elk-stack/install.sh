@@ -32,7 +32,7 @@ crontab -u root - << EOM
 EOM
 
 ## Install Elasticsearch plugins
-/usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-cloud-aws/2.4.2
+/usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-cloud-aws/2.5.1
 /usr/share/elasticsearch/bin/plugin --install mobz/elasticsearch-head
 /usr/share/elasticsearch/bin/plugin --install lukas-vlcek/bigdesk
 /usr/share/elasticsearch/bin/plugin --install karmi/elasticsearch-paramedic
