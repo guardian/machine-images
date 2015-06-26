@@ -75,9 +75,9 @@ chmod +x /etc/cron.daily/kibana-index-backup
 mkdir /opt/oauth2_proxy
 useradd -M -r -U -s /bin/false -d /opt/oauth2_proxy oauth2-proxy
 cd /tmp
-wget https://github.com/bitly/oauth2_proxy/releases/download/v1.1.1/google_auth_proxy-1.1.1.linux-amd64.go1.4.2.tar.gz
-tar -zxf google_auth_proxy-1.1.1.linux-amd64.go1.4.2.tar.gz
-mv /tmp/google_auth_proxy-1.1.1.linux-amd64.go1.4.2/google_auth_proxy /opt/oauth2_proxy/oauth2_proxy
+wget https://github.com/bitly/oauth2_proxy/releases/download/v2.0/oauth2_proxy-2.0.linux-amd64.go1.4.2.tar.gz
+tar -zxf oauth2_proxy-2.0.linux-amd64.go1.4.2.tar.gz
+mv /tmp/oauth2_proxy-2.0.linux-amd64.go1.4.2/oauth2_proxy /opt/oauth2_proxy/oauth2_proxy
 
 ## Install NGINX config
 cp $FEATURE_ROOT/nginx-config /etc/nginx/sites-available/default

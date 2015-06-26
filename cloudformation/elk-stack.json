@@ -125,7 +125,7 @@
                     }
                 ],
                 "HealthCheck": {
-                    "Target": "HTTP:80/__es/",
+                    "Target": "HTTP:4180/__es/",
                     "Timeout": "5",
                     "Interval": "10",
                     "UnhealthyThreshold": "5",
@@ -295,14 +295,7 @@
                         "FromPort": "4180",
                         "ToPort": "4180",
                         "CidrIp": "0.0.0.0/0"
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
-                        "CidrIp": "0.0.0.0/0"
                     }
-
                 ]
             }
         },
@@ -347,12 +340,6 @@
                         "IpProtocol": "tcp",
                         "FromPort": "4180",
                         "ToPort": "4180",
-                        "SourceSecurityGroupId": { "Ref": "ExtLBSG" }
-                    },
-                    {
-                        "IpProtocol": "tcp",
-                        "FromPort": "80",
-                        "ToPort": "80",
                         "SourceSecurityGroupId": { "Ref": "ExtLBSG" }
                     },
                     {
