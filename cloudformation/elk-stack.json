@@ -29,7 +29,7 @@
             "Type": "Number",
             "Default": "1",
             "MinValue": 1,
-            "MaxValue": 12
+            "MaxValue": 6
         },
         "InstanceType": {
             "Description": "EC2 instance type",
@@ -125,10 +125,10 @@
                     }
                 ],
                 "HealthCheck": {
-                    "Target": "HTTP:4180/ping",
-                    "Timeout": "10",
-                    "Interval": "20",
-                    "UnhealthyThreshold": "10",
+                    "Target": "HTTP:80/__es/",
+                    "Timeout": "5",
+                    "Interval": "10",
+                    "UnhealthyThreshold": "5",
                     "HealthyThreshold": "2"
                 },
                 "Subnets": { "Ref": "PublicVpcSubnets" },
@@ -171,7 +171,7 @@
                 "VPCZoneIdentifier": { "Ref": "PrivateVpcSubnets" },
                 "LaunchConfigurationName": { "Ref": "LaunchConfig" },
                 "MinSize": { "Ref": "Capacity" },
-                "MaxSize": "12",
+                "MaxSize": { "Ref": "Capacity" },
                 "DesiredCapacity": { "Ref": "Capacity" },
                 "HealthCheckType": "ELB",
                 "HealthCheckGracePeriod": 300,
@@ -295,7 +295,14 @@
                         "FromPort": "4180",
                         "ToPort": "4180",
                         "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "0.0.0.0/0"
                     }
+
                 ]
             }
         },
@@ -344,6 +351,12 @@
                     },
                     {
                         "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "SourceSecurityGroupId": { "Ref": "ExtLBSG" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
                         "FromPort": "22",
                         "ToPort": "22",
                         "CidrIp": "10.0.0.0/8"
@@ -352,7 +365,7 @@
                         "IpProtocol": "icmp",
                         "FromPort": "-1",
                         "ToPort": "-1",
-                        "CidrIp": "10.0.0.0/8"
+                        "CidrIp": "0.0.0.0/0"
                     }
                 ]
             }
