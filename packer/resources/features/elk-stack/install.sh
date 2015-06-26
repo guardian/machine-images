@@ -13,8 +13,6 @@ KIBANA_VERSION=4.1.0
 wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
 echo "deb http://packages.elastic.co/elasticsearch/1.5/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
 echo "deb http://packages.elastic.co/logstash/1.5/debian stable main" > /etc/apt/sources.list.d/logstash.list
-add-apt-repository -y ppa:chris-lea/node.js
-sleep 1
 
 ## Update index and install packages
 apt-get update
