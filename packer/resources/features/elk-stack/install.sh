@@ -70,7 +70,8 @@ mkdir /var/log/kibana
 chown kibana:kibana /var/log/kibana
 
 # Install Kibana ES index backup script
-cp $FEATURE_ROOT/kibana-index-backup /etc/cron.daily
+cp $FEATURE_ROOT/kibana-index-backup /etc/cron.daily/kibana-index-backup
+chmod +x /etc/cron.daily/kibana-index-backup
 
 # Install Google Auth Proxy
 mkdir /opt/oauth2_proxy
