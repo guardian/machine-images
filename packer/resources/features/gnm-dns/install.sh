@@ -12,7 +12,7 @@ fi
 PROXIES=( "10.252.63.100" "10.253.63.100" )
 DOMAINS=( "guprod.gnl" "dc1.gnm" "dc2.gnm" "dmz.gnl" "gws.gutools.co.uk" \
   "252.10.in-addr.arpa" "253.10.in-addr.arpa" "235.10.in-addr.arpa" \
-  "236.10.in-addr.arpa" "dev-gutools.co.uk" )
+  "236.10.in-addr.arpa" "dev-gutools.co.uk" "gudev.gnm" "guprod.gnm" )
 DNSMASQ_GNM_CONF="/etc/dnsmasq.d/gnm.conf"
 
 cat > ${DNSMASQ_GNM_CONF} <<-END
