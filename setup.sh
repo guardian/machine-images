@@ -6,7 +6,7 @@ SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 PACKER_DIR="${SCRIPTPATH}/packer_bin"
 
 PLATFORM=$(uname)
-PACKER_VERSION="0.7.5"
+PACKER_VERSION="0.8.1"
 
 if [ -x "${PACKER_DIR}/packer" ]; then
   if ${PACKER_DIR}/packer version | grep -q "${PACKER_VERSION}"
