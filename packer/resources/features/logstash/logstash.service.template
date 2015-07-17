@@ -1,0 +1,15 @@
+[Unit]
+Description=Logstash
+
+[Service]
+User=@USER@
+Group=@USER@
+Restart=on-failure
+StandardOutput=null
+StandardError=null
+Environment='HOME=/home/@USER@'
+WorkingDirectory=/home/@USER@
+ExecStart=/opt/logstash/bin/logstash -f @CONFIGFILE@
+
+[Install]
+WantedBy=multi-user.target
