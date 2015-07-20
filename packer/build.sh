@@ -14,9 +14,8 @@ FLAGS='-color=false'
 # set DEBUG flag if not in TeamCity
 [ -z "${BUILD_NUMBER}" ] && FLAGS="-debug"
 
-# Add any other command line args as flags
-shift
-FLAGS="$FLAGS $@"
+# If the PACKER_FLAGS environment variable exists, add the value to FLAGS
+[ -n "${PACKER_FLAGS}" ] && FLAGS="${FLAGS} ${PACKER_FLAGS}"
 
 # set PACKER_HOME if it isn't already provided
 [ -z "${PACKER_HOME}" ] && PACKER_HOME=${SCRIPTPATH}/../packer_bin
