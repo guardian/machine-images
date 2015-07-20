@@ -19,21 +19,23 @@ ln -s /opt/features/logstash/logstash /opt/logstash
 ESCAPED_USER=$(echo $USER | sed -e 's/[\/&]/\\&/g')
 ESCAPED_CONFIGFILE=$(echo $CONFIGFILE | sed -e 's/[\/&]/\\&/g')
 
-# Upstart
-if [ -d "/etc/init" ]; then
-sed \
-  -e "s/@USER@/$ESCAPED_USER/g" \
-  -e "s/@CONFIGFILE@/$ESCAPED_CONFIGFILE/g" \
-  /opt/features/logstash/logstash.conf.template > /etc/init/logstash.conf
-  echo "Logstash is now installed as an Upstart service. You can start it by running 'sudo start logstash'."
-fi
+INIT=$(cat /proc/1/comm)
 
-# systemd
-if [ -d "/etc/systemd/system" ]; then
-sed \
-  -e "s/@USER@/$ESCAPED_USER/g" \
-  -e "s/@CONFIGFILE@/$ESCAPED_CONFIGFILE/g" \
-  /opt/features/logstash/logstash.service.template > /etc/systemd/system/logstash.service
-  echo "Logstash is now installed as a systemd service. You can start it by running 'sudo systemctl start logstash'."
-fi
-
+case "${INIT}" in
+  init)
+    # Upstart
+    sed \
+      -e "s/@USER@/$ESCAPED_USER/g" \
+      -e "s/@CONFIGFILE@/$ESCAPED_CONFIGFILE/g" \
+      /opt/features/logstash/logstash.conf.template > /etc/init/logstash.conf
+      echo "Logstash is now installed as an Upstart service. You can start it by running 'sudo start logstash'."
+    ;;
+  systemd)
+    # systemd
+    sed \
+      -e "s/@USER@/$ESCAPED_USER/g" \
+      -e "s/@CONFIGFILE@/$ESCAPED_CONFIGFILE/g" \
+      /opt/features/logstash/logstash.service.template > /etc/systemd/system/logstash.service
+      echo "Logstash is now installed as a systemd service. You can start it by running 'sudo systemctl start logstash'."
+    ;;
+esac

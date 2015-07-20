@@ -121,11 +121,25 @@ esac
 
 chown -R ${USER} ${HOME_DIR}/${TARBALL_DIR}
 
-# install upstart/systemd file
-/opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
-                ${SCRIPTPATH}/upstart.conf.template > /etc/init/${APP}.conf
+INIT=$(cat /proc/1/comm)
 
-# optionally start
-if [ "${START}" == "true" ]; then
-  start ${APP}
-fi
+case "${INIT}" in
+  init)
+    # install upstart/systemd file
+    /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
+                    ${SCRIPTPATH}/upstart.conf.template > /etc/init/${APP}.conf
+    # optionally start
+    if [ "${START}" == "true" ]; then
+      start ${APP}
+    fi
+    ;;
+  systemd)
+    # install upstart/systemd file
+    /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
+                    ${SCRIPTPATH}/systemd.service.template > /etc/systemd/system/${APP}.service
+    ;;
+    # optionally start
+    if [ "${START}" == "true" ]; then
+      systemctl start ${APP}
+    fi
+esac
