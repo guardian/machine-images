@@ -6,16 +6,16 @@ SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 PACKER_DIR="${SCRIPTPATH}/packer_bin"
 
 PLATFORM=$(uname)
-PACKER_VERSION="0.7.5"
+PACKER_VERSION="0.8.2"
 
 if [ -x "${PACKER_DIR}/packer" ]; then
-  if ${PACKER_DIR}/packer version | grep -q "${PACKER_VERSION}"
+  if ${PACKER_DIR}/packer version | grep "Packer v${PACKER_VERSION}" >/dev/null 2>&1
   then
     echo "Packer ${PACKER_VERSION} already installed"
     exit 0
   else
-    echo "Packer installed, but not version ${PACKER_VERSION} - delete packer_bin directory and run again to install if desired"
-    exit 1
+    echo "Packer installed, but not version ${PACKER_VERSION} - deleting existing packer_bin directory"
+    rm -r ${PACKER_DIR}
   fi
 fi
 
