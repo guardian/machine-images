@@ -66,7 +66,7 @@ sed -i s/ubuntu.pool.ntp.org/amazon.pool.ntp.org/ /etc/ntp.conf
 ## Setup network adapter
 
 new_section "Configuring enhanced networking (ixgbevf)"
-See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html
+# See http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/enhanced-networking.html
 wget http://sourceforge.net/projects/e1000/files/ixgbevf%20stable/2.16.1/ixgbevf-2.16.1.tar.gz
 tar -xzf ixgbevf-2.16.1.tar.gz
 pushd ./ixgbevf-2.16.1/src
