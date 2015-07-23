@@ -137,9 +137,9 @@ case "${INIT}" in
     # install upstart/systemd file
     /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
                     ${SCRIPTPATH}/systemd.service.template > /etc/systemd/system/${APP}.service
-    ;;
     # optionally start
     if [ "${START}" == "true" ]; then
       systemctl start ${APP}
     fi
+    ;;
 esac

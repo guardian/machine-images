@@ -1,0 +1,11 @@
+[Unit]
+Description=@APP@ application
+
+[Service]
+User=@USER@
+Restart=on-failure
+WorkingDirectory=/home/@USER@
+ExecStart=/home/@USER@/@APP@/bin/@APP@
+
+[Install]
+WantedBy=multi-user.target
