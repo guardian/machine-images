@@ -27,7 +27,7 @@ new_section "Installing required packages"
 apt-get --yes --force-yes install \
   git wget language-pack-en build-essential python-setuptools \
   openjdk-8-jre-headless openjdk-8-jdk cloud-guest-utils jq \
-  ntp unzip python3-pip
+  ntp unzip python3-pip=1.5.4-1
 
 ## Workaround for Debian Java packaging bug
 ## See:
