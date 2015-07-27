@@ -1,0 +1,15 @@
+[Unit]
+Description=Kibana
+
+[Service]
+ExecStart=/opt/kibana/bin/kibana
+Restart=always
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=kibana4
+setuid kibana
+setgid kibana
+Environment=NODE_ENV=production
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,13 @@
+[Unit]
+Description=Logstash
+
+[Service]
+User=logstash
+Group=logstash
+Restart=on-failure
+Environment='HOME=/var/lib/logstash'
+WorkingDirectory=/var/lib/logstash
+ExecStart=/opt/logstash/bin/logstash -f /etc/logstash/conf.d
+
+[Install]
+WantedBy=multi-user.target
