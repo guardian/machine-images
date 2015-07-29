@@ -1,0 +1,22 @@
+# mongo.conf.erb
+#
+
+# Location of the database files.
+dbpath = /var/lib/mongo
+
+# fork and run in background
+fork = true
+
+# Full filename path to where log messages will be written.
+logpath = /var/log/mongo/mongod.log
+logappend = true
+
+# Replica set configuration
+replSet = <%= ENV['STACK'] %>-<%= ENV['APP'] %>-<%= ENV['STAGE'] %>
+
+# Authentication
+auth = true
+keyFile = /var/lib/mongo/keyFile
+
+# Enables periodic logging of CPU utilization and I/O wait
+cpu = true
