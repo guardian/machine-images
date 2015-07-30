@@ -140,7 +140,6 @@ class S3OptimisticLock
     def initialize(
        s3, s3_bucket_name, s3_obj_name, this_host_key, expiry_in_secs=OPT_LOCK_DEFAULT_EXPIRY
     )
-
         @s3 = s3
         @this_host_key = this_host_key
         @s3_bucket_name = s3_bucket_name
@@ -148,7 +147,6 @@ class S3OptimisticLock
         @s3_obj_name = s3_obj_name
         @s3_obj = @s3_bucket.objects[@s3_obj_name]
         @expiry_in_secs = expiry_in_secs
-
     end
 
     def take_lock
@@ -213,7 +211,7 @@ class MongoDbReplSet
     def initialize(
         admin_user=nil,
         admin_password=nil,
-        replSet_name = "iddb-TEST",
+        replSet_name,
         mongodb_port = MONGODB_DEFAULT_PORT
     )
         @this_host = Socket.gethostname
@@ -726,21 +724,9 @@ def parse_options(args)
             opts.separator ""
             opts.separator "Specific options:"
 
-            opts.on("-s", "--stage STAGE",
-            "development stage (TEST, DEV, PROD)") do |stage|
-                options.stage = stage
-            end
             opts.on("-u", "--username USERNAME",
             "MongoDB admin username") do |admin_user|
                 options.admin_user = admin_user
-            end
-            opts.on("-r", "--replset_name REPLSET_NAME",
-            "MongoDB Replica Set Name") do |replSet_name|
-                options.replSet_name = replSet_name
-            end
-            opts.on("-p", "--port PORT",
-            "MongoDB port") do |mongodb_port|
-                options.mongodb_port = mongodb_port
             end
             opts.on("-Z", "--zone_visibility_mask 'abc'",
             "AZ secondary member visibility mask (combination of a+b+c)") do |v|
