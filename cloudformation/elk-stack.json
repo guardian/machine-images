@@ -230,16 +230,14 @@
                                 " /etc/elasticsearch/elasticsearch.yml.template > /etc/elasticsearch/elasticsearch.yml" ] ] },
 
                             { "Fn::Join": [ "", [ "sed",
-                                " -i -e \"s,@@ES_HEAP_SIZE,$((",
+                                " -i -E \"s,(#)?ES_HEAP_SIZE=.*,ES_HEAP_SIZE=$((",
                                 { "Fn::FindInMap" : [ "AWSInstanceType2Memory", { "Ref" : "InstanceType" }, "Memory" ]}
-                                , "/2))m,g\"",
-                                " /etc/init/elasticsearch.conf" ] ] },
+                                , "/2))m,g\" /etc/default/elasticsearch" ] ] },
 
                             { "Fn::Join": [ "", [ "sed",
-                                " -i -e \"s,LS_HEAP_SIZE=.*,LS_HEAP_SIZE='$((",
+                                " -i -E \"s,(#)?LS_HEAP_SIZE=.*,LS_HEAP_SIZE='$((",
                                 { "Fn::FindInMap" : [ "AWSInstanceType2Memory", { "Ref" : "InstanceType" }, "Memory" ]}
-                                , "/4))m',g\"",
-                                " /etc/init/logstash.conf" ] ] },
+                                , "/4))m',g\" /etc/default/logstash" ] ] },
 
                             { "Fn::Join": [ "", [ "sed",
                                 " -i -e 's,@@DOMAIN_NAME,", {"Fn::If": ["HostnameSpecified",
@@ -250,12 +248,19 @@
                                 " -e 's,@@CLIENT_SECRET,", { "Ref": "GoogleOAuthClientSecret" }, ",g'",
                                 " -e 's,@@COOKIE_SECRET,", { "Ref": "GoogleOAuthCookieSecret" }, ",g'",
                                 " -e 's,@@ALLOWED_DOMAIN,", { "Ref": "GoogleAuthDomain" }, ",g'",
-                                " /etc/init/oauth2-proxy.conf" ] ] },
+                                " /etc/default/oauth2-proxy" ] ] },
 
-                            "service elasticsearch start",
+                            "systemctl enable elasticsearch",
+                            "systemctl enable logstash",
+                            "systemctl enable kibana",
+                            "systemctl enable oauth2-proxy",
+                            "systemctl enable nginx",
+
+                            "service elasticsearch restart",
                             "service logstash restart",
                             "service kibana restart",
                             "service oauth2-proxy restart",
+                            "service nginx restart",
 
                             "sleep 120",
                             "if curl -s -XGET 'http://localhost:9200/_snapshot/_all' | grep -q s3_snapshot; then",

@@ -56,6 +56,8 @@ cp $FEATURE_ROOT/logstash-indexer.conf /etc/logstash/conf.d/logstash-indexer.con
 
 ## Install logstash plugins
 su - logstash -s /bin/sh -c '/opt/logstash/bin/plugin install logstash-input-kinesis'
+rm /etc/init.d/logstash
+cp $FEATURE_ROOT/systemd-logstash.service /etc/systemd/system/logstash.service
 
 ## Install Kibana
 wget https://download.elastic.co/kibana/kibana/kibana-${KIBANA_VERSION}-linux-x64.tar.gz -O /tmp/kibana-${KIBANA_VERSION}-linux-x64.tar.gz
@@ -65,7 +67,7 @@ mv /opt/kibana-${KIBANA_VERSION}-linux-x64 /opt/kibana
 useradd -M -r -U -s /bin/false -d /opt/kibana kibana
 mkdir /var/log/kibana
 chown kibana:kibana /var/log/kibana
-cp $FEATURE_ROOT/systemd-kibana4.service /etc/systemd/system/kibana.service
+cp $FEATURE_ROOT/systemd-kibana.service /etc/systemd/system/kibana.service
 
 # Install Kibana ES index backup script
 cp $FEATURE_ROOT/kibana-index-backup /etc/cron.daily/kibana-index-backup
