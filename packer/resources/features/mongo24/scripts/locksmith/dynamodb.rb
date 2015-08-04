@@ -8,7 +8,7 @@ module Locksmith
   class Dynamodb
     TTL = 120
     MAX_LOCK_ATTEMPTS = 20
-    LOCK_TIMEOUT = 15
+    LOCK_TIMEOUT = 120
     LOCK_RETRY_TIME = 0.5
 
     def initialize(lock_table_name,
@@ -37,9 +37,12 @@ module Locksmith
             release_lock(name, last_rev) if last_rev < (Time.now.to_i - @ttl)
             write_lock(name, 0, new_rev)
             log(at: "lock-acquired", lock: name, rev: new_rev)
-            result = yield
-            release_lock(name, new_rev)
-            log(at: "lock-released", lock: name, rev: new_rev)
+            begin
+              result = yield
+            ensure
+              release_lock(name, new_rev)
+              log(at: "lock-released", lock: name, rev: new_rev)
+            end
             return result
           end
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
