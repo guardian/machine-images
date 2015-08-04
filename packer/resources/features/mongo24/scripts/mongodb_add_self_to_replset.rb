@@ -21,18 +21,12 @@ require 'syslog'
 require 'optparse'
 require 'ostruct'
 require 'shellwords'
+require_relative 'locksmith/dynamodb'
 
 include Mongo
 
 ## Set sys logger facility
 SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
-#
-# S3 'optimistic' lock expiry and waits in seconds for lock to be successfully taken or released.
-# The take and release waits assume S3 writes are eventually consistent although from testing
-# S3 writes appear to be read consistent for the writer.
-OPT_LOCK_DEFAULT_EXPIRY = 3600
-OPT_LOCK_TAKE_WAIT = 0
-OPT_LOCK_RELEASE_WAIT = OPT_LOCK_TAKE_WAIT
 
 # S3 bucket containing the S3 lock file and host:port keys of replica set members.
 MONGODB_HOSTS_BUCKET_NAME = 'flexible-db-hosts'
@@ -105,98 +99,13 @@ class S3 < AWS::S3
 
     def initialize
 
-        @credentials = AWS::Core::CredentialProviders::EC2Provider.new
+        @credentials = AWS::CredentialProviders::InstanceProfileCredentials.new
 
         AWS.config(
            :credential_provider => @credentials,
            :region => 'eu-west-1'
         )
         super
-    end
-
-end
-
-## Distributed Lock Mechanism
-#
-# When reconfiguring a Replica set, it's important to serialize this so that only one member is
-# attempting to do this at a time - otherwise more than one distinct replica sets *might*
-# be created.
-# A more sophisticated distributed locking mechanism should probably be used
-# but for now, S3 is used.
-#
-# The following class provides this serialisation using AWS S3 and provides an 'optimistic' lock.
-# 'Optimistic' because of the potential for eventual consistency issues where it is assumed
-# that the request to take the lock is *not* guaranteed to succeed.
-# This class encapsulates the S3 based optimistic lock access.
-class S3OptLockError < StandardError
-end
-class S3OptimisticLock
-
-    attr_reader :this_host_key,
-                :s3_obj_name, :s3_obj,
-                :s3_bucket_name, :s3_bucket,
-                :expiry_in_secs
-
-    def initialize(
-       s3, s3_bucket_name, s3_obj_name, this_host_key, expiry_in_secs=OPT_LOCK_DEFAULT_EXPIRY
-    )
-        @s3 = s3
-        @this_host_key = this_host_key
-        @s3_bucket_name = s3_bucket_name
-        @s3_bucket = @s3.buckets[@s3_bucket_name]
-        @s3_obj_name = s3_obj_name
-        @s3_obj = @s3_bucket.objects[@s3_obj_name]
-        @expiry_in_secs = expiry_in_secs
-    end
-
-    def take_lock
-        @s3_obj.write(@this_host_key) if self.lock_has_expired or self.this_host_has_lock
-        sleep(OPT_LOCK_TAKE_WAIT)
-        return true if self.this_host_has_lock
-        raise S3OptLockError, 'Failed to Take OptLock!'
-    end
-
-    def release_lock
-        @s3_obj.write('') if self.this_host_has_lock
-        sleep(OPT_LOCK_RELEASE_WAIT)
-        return if not self.this_host_has_lock
-        raise S3OptLockError, 'Failed to Release OptLock!'
-    end
-
-    def read_lock_key
-        begin
-            @s3_obj.read unless self.lock_has_expired
-        rescue AWS::S3::Errors::NoSuchKey
-            nil
-        end
-    end
-
-    def lock_taken_time
-        begin
-            @s3_obj.last_modified unless self.lock_has_expired
-        rescue AWS::S3::Errors::NoSuchKey
-            nil
-        end
-    end
-
-    def lock_has_expired
-        begin
-            @s3_obj.read.empty? or Time.now() - @s3_obj.last_modified >= @expiry_in_secs
-        rescue AWS::S3::Errors::NoSuchKey
-            true
-        end
-    end
-
-    def host_has_lock(host_key)
-        self.read_lock_key == host_key
-    end
-
-    def this_host_has_lock
-        self.host_has_lock(@this_host_key)
-    end
-
-    def is_locked
-        not self.read_lock_key.nil? and not self.read_lock_key.empty?
     end
 
 end
@@ -747,11 +656,12 @@ def parse_options(args)
         raise "Non-empty list of arguments **(#{args})**" if !args.empty?
 
         options.debug_mode = options.debug_mode || false
-        options.stage = options.stage || ENV['STAGE'] || 'TEST'
-        options.admin_user = options.admin_user || 'aws_admin'
-        options.replSet_name = options.replSet_name ||
-            ENV['MONGODB_REPLSET'] || "iddb-#{options.stage}"
-        options.mongodb_port = options.mongodb_port || MONGODB_DEFAULT_PORT
+        options.stage = options.stage || ENV['STAGE'] || get_tag("Stage")
+        options.stack = options.stack || ENV['STACK'] || get_tag("Stack")
+        options.app = options.app || ENV['APP'] || get_tag("App")
+#        options.admin_user = options.admin_user || 'aws_admin'
+        options.replSet_name = [ options.stack, options.app, options.stage ].join('-')
+        options.mongodb_port = MONGODB_DEFAULT_PORT
         options.visibility_mask = options.visibility_mask ||
             string_to_visibility_mask(ENV['MONGODB_AZ_VISIBILITY_MASK']) ||
                 {'a'=>true,'b'=>true,'c'=>true}
