@@ -1,4 +1,4 @@
-#! /usr/bin/ruby
+#! /usr/bin/env ruby
 #
 # Script to automatically either initiate a MongoDB Replica set OR add the host on which the
 # script is run to the replica set.
@@ -12,30 +12,18 @@
 #       on parsing the error messages returned which may of course change in future versions
 #       of either MongoDB or the other software used by this script.
 #
-require 'rubygems'
-require 'set'
 require 'aws-sdk'
-
 require 'syslog'
 require 'optparse'
 require 'ostruct'
 require 'shellwords'
 require_relative 'locksmith/dynamodb'
-
-include Mongo
+require_relative 'mongodb/repl_set'
+require_relative 'mongodb/seed_list'
+require_relative 'aws/helpers'
 
 ## Set sys logger facility
 SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
-
-# S3 bucket containing the S3 lock file and host:port keys of replica set members.
-MONGODB_HOSTS_BUCKET_NAME = 'flexible-db-hosts'
-
-
-# use credentials file at .aws/credentials (testing)
-# Aws.config[:credentials] = Aws::SharedCredentials.new
-# use instance profile (when on instance)
-Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
-Aws.config[:region] = "eu-west-1"
 
 # Set up 'can not continue' exception class
 class FatalError < StandardError
@@ -52,6 +40,10 @@ def string_to_visibility_mask(visibility_mask_string = 'abc')
     visibility_mask_hash
 end
 
+def get_tag(tag_name)
+  AwsHelper::InstanceData::get_tag(tag_name)
+end
+
 def parse_options(args)
     # The options specified on the command line will be collected in *options*.
     # Set default values here.
@@ -64,7 +56,17 @@ def parse_options(args)
             opts.separator ""
             opts.separator "Specific options:"
 
-            opts.on("-s", "--stage STAGE", "")
+            opts.on("-s", "--stage STAGE", "Environment stage name") do |stage|
+              options.stage = stage
+            end
+
+            opts.on("-k", "--stack STACK", "Stack name") do |stack|
+              options.stack = stack
+            end
+
+            opts.on("-a", "--app APP", "App name") do |app|
+              options.app = app
+            end
 
             opts.on("-u", "--username USERNAME",
             "MongoDB admin username") do |admin_user|
@@ -88,13 +90,15 @@ def parse_options(args)
 
         raise "Non-empty list of arguments **(#{args})**" if !args.empty?
 
+        instance_tags = AwsHelper::InstanceData::get_tags
+
         options.debug_mode = options.debug_mode || false
-        options.stage = options.stage || ENV['STAGE'] || get_tag("Stage")
-        options.stack = options.stack || ENV['STACK'] || get_tag("Stack")
-        options.app = options.app || ENV['APP'] || get_tag("App")
-#        options.admin_user = options.admin_user || 'aws_admin'
+        options.stage = options.stage || ENV['STAGE'] || instance_tags["Stage"]
+        options.stack = options.stack || ENV['STACK'] || instance_tags["Stack"]
+        options.app = options.app || ENV['APP'] || instance_tags["App"]
+#        options.admin_user ||= 'aws_admin'
         options.replSet_name = [ options.stack, options.app, options.stage ].join('-')
-        options.mongodb_port = MONGODB_DEFAULT_PORT
+        options.mongodb_port = MongoDB::MONGODB_DEFAULT_PORT
         options.visibility_mask = options.visibility_mask || string_to_visibility_mask("abc")
 
     rescue => e
@@ -161,6 +165,13 @@ options = parse_options(ARGV)
 $logger = setup_logger(options.debug_mode)
 $logger.info('MongoDB Add Replica Set Member.....')
 
+# use credentials file at .aws/credentials (testing)
+# Aws.config[:credentials] = Aws::SharedCredentials.new
+# use instance profile (when on instance)
+$logger.info('Getting Instance Profile credentials.....')
+Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
+Aws.config[:region] = AwsHelper::Metadata::region
+
 # Passing admin password via env. is mandatory.
 admin_password = ENV.fetch('MONGODB_ADMIN_PASSWORD', nil)
 if not admin_password
@@ -169,14 +180,14 @@ then
     raise 'FAILED: $MONGODB_ADMIN_PASSWORD must be set!!'
 end
 
-availability_zone = ENV.fetch('EC2_PLACEMENT_AVAILABILITY_ZONE','')[-1..-1]
+availability_zone = AwsHelper::Metadata::availability_zone[-1..-1]
 
 # Set up MongoDB replica set object
-mongodb_replSet = MongoDbReplSet.new(
+mongodb_replSet = MongoDB::ReplicaSet.new(
     options.admin_user,
     admin_password,
-    options.replSet_name,
-    options.mongodb_port
+    options.mongodb_port,
+    options.replSet_name
 )
 this_host_key = mongodb_replSet.this_host_key
 

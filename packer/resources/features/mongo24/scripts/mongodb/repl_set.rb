@@ -71,11 +71,11 @@ module MongoDB
                   :replSet_found, :replSet_primary_found, :init_config
 
       def initialize(
-          admin_user=nil,
-          admin_password=nil,
-          replSet_name,
-          mongodb_port = 27017
-      )
+          admin_user = nil,
+          admin_password = nil,
+          mongodb_port = MONGODB_DEFAULT_PORT,
+          replSet_name )
+
           @this_host = Socket.gethostname
           @this_host_ip = IPSocket.getaddress(@this_host)
           @replSet_name = replSet_name
