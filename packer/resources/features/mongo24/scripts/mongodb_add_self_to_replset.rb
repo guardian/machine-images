@@ -29,7 +29,7 @@ SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
 class FatalError < StandardError
 end
 
-# Method to convert an 'avaiablitiy zone visibility mask' from a string to a hash
+# Method to convert an 'availability zone visibility mask' from a string to a hash
 # This is used to determine if a replica set member should be visible (not hidden)
 # in a particular AZ.
 # The string must be a distinct combination of letters (which should indicate AZs)
@@ -40,8 +40,11 @@ def string_to_visibility_mask(visibility_mask_string = 'abc')
     visibility_mask_hash
 end
 
+instance_tags = nil
+
 def get_tag(tag_name)
-  AwsHelper::InstanceData::get_tag(tag_name)
+  instance_tags ||= AwsHelper::InstanceData::get_tags
+  instance_tags[tag_name]
 end
 
 def parse_options(args)
@@ -90,16 +93,14 @@ def parse_options(args)
 
         raise "Non-empty list of arguments **(#{args})**" if !args.empty?
 
-        instance_tags = AwsHelper::InstanceData::get_tags
-
         options.debug_mode = options.debug_mode || false
-        options.stage = options.stage || ENV['STAGE'] || instance_tags["Stage"]
-        options.stack = options.stack || ENV['STACK'] || instance_tags["Stack"]
-        options.app = options.app || ENV['APP'] || instance_tags["App"]
-#        options.admin_user ||= 'aws_admin'
+        options.stage = options.stage || get_tag("Stage")
+        options.stack = options.stack || get_tag("Stack")
+        options.app = options.app || get_tag("App")
+        options.admin_user ||= 'aws_admin'
         options.replSet_name = [ options.stack, options.app, options.stage ].join('-')
-        options.mongodb_port = MongoDB::MONGODB_DEFAULT_PORT
-        options.visibility_mask = options.visibility_mask || string_to_visibility_mask("abc")
+        options.mongodb_port = MongoDB::DEFAULT_PORT
+        options.visibility_mask ||= string_to_visibility_mask("abc")
 
     rescue => e
         puts "\nOptions Error: #{e.message}" unless e.message.empty?
@@ -131,7 +132,7 @@ def setup_logger(debug_mode=false)
 end
 
 # Method to initiate the replica set (essentially a wrapper for the 'replSetinitate' command).
-def initiate_replSet(mongodb_replSet, stage)
+def initiate_replSet(mongodb_replSet)
 
     if mongodb_replSet.is_replSet() and not mongodb_replSet.is_this_replSet()
     then
@@ -145,7 +146,7 @@ def initiate_replSet(mongodb_replSet, stage)
         async = false
         begin
             mongodb_replSet.replSet_initiate(async)
-        rescue Mongo::OperationFailure => rinit
+        rescue Mongo::Error::OperationFailure => rinit
             $logger.debug 'Failed to initiate Replica Set...'
             $logger.debug rinit.message
             raise
@@ -159,18 +160,17 @@ end
 
 exit if __FILE__ != $0
 
+# use credentials file at .aws/credentials (testing)
+# Aws.config[:credentials] = Aws::SharedCredentials.new
+# use instance profile (when on instance)
+Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
+Aws.config[:region] = AwsHelper::Metadata::region
+
 options = parse_options(ARGV)
 
 # Set up global logger
 $logger = setup_logger(options.debug_mode)
 $logger.info('MongoDB Add Replica Set Member.....')
-
-# use credentials file at .aws/credentials (testing)
-# Aws.config[:credentials] = Aws::SharedCredentials.new
-# use instance profile (when on instance)
-$logger.info('Getting Instance Profile credentials.....')
-Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
-Aws.config[:region] = AwsHelper::Metadata::region
 
 # Passing admin password via env. is mandatory.
 admin_password = ENV.fetch('MONGODB_ADMIN_PASSWORD', nil)
@@ -198,6 +198,11 @@ locksmith = Locksmith::Dynamodb.new(
   ttl = 3600
 )
 
+seed_list = MongoDB::SeedList.new(
+  table_name = "mongo-seedlists",
+  replSet_name = options.replSet_name
+)
+
 lock_attempts = 0
 
 locksmith.lock(options.replSet_name) do
@@ -206,14 +211,12 @@ locksmith.lock(options.replSet_name) do
     begin
 
         # Get the mongodb host seed list from S3
-        mongodb_host_seed_list = MongoDBSeedList.new(
-            s3, options.stage, options.replSet_name, this_host_key
-        )
+        mongodb_host_seed_list = seed_list.seeds
 
         # Use the seed list to attempt to find the replica set on the network
-        mongodb_replSet.find_replSet_service(mongodb_host_seed_list.to_a)
+        mongodb_replSet.find_replSet_service(mongodb_host_seed_list)
 
-        if mongodb_host_seed_list.any?
+        if !mongodb_host_seed_list.empty?
         then
             ## If this member hasn't been added (in case when replica set had already
             #  been inititated) then add it now
@@ -249,10 +252,11 @@ locksmith.lock(options.replSet_name) do
             unless mongodb_replSet.replSet_found
 
         # Add the member to the seed list.
-        mongodb_host_seed_list.add(this_host_key)
+        seed_list.add(this_host_key)
 
         # Delete any members in the seed list which are no longer in the replica set config
-        mongodb_host_seed_list.keep_if { |m| mongodb_replSet.is_replSet_member(m) }
+        ghost_members = seed_list.seeds.reject { |m| mongodb_replSet.is_replSet_member(m) }
+        ghost_members.each { |g| seed_list.remove(g) }
 
         # Check we still have the lock - if not something's gone badly wrong.
         raise FatalError, 'MongoDB Replica Set Initiation/Config. sync. Lock Error' \
@@ -264,13 +268,13 @@ locksmith.lock(options.replSet_name) do
         $logger.debug("#{fe.message}")
         raise
     rescue => ce
-        if (rs_add_attempts += 1) < MONGODB_REPLSET_RECONFIG_MAX_ATTEMPTS
+        if (rs_add_attempts += 1) < MongoDB::REPLSET_RECONFIG_MAX_ATTEMPTS
         then
             $logger.debug('Failed to add MongoDB Replica Set Member.....'+
                 "(attempt = #{rs_add_attempts})")
             $logger.debug("#{ce.message}")
-            $logger.debug("Sleeping for #{MONGODB_REPLSET_CONNECT_WAIT} seconds.....")
-            sleep(MONGODB_REPLSET_CONNECT_WAIT)
+            $logger.debug("Sleeping for #{MongoDB::REPLSET_CONNECT_WAIT} seconds.....")
+            sleep(MongoDB::REPLSET_CONNECT_WAIT)
             retry
         end
         $logger.info("FAILED: #{ce.message}")

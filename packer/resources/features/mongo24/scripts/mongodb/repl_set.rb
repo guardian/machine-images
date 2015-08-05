@@ -3,7 +3,7 @@ require 'mongo'
 require 'socket'
 
 module MongoDB
-  MONGODB_DEFAULT_PORT = 27017
+  DEFAULT_PORT = 27017
 
   # MongoDB server exception error messages.
   # WARNING: This script has been tested ONLY against:
@@ -13,34 +13,34 @@ module MongoDB
   #       on parsing the error messages returned which may of course change in future versions
   #       of either MongoDB or the other software used by this script.
 
-  MONGODB_REPLSET_NOT_FOUND_ERR_MESS_REGEX = '^Cannot connect to a replica set using seeds'
-  MONGODB_REPLSET_INIT_FAILED_ERR_MESS_REGEX = \
+  REPLSET_NOT_FOUND_ERR_MESS_REGEX = '^Cannot connect to a replica set using seeds'
+  REPLSET_INIT_FAILED_ERR_MESS_REGEX = \
           "^Database command 'replSetInitiate' failed: already initialized"
-  MONGODB_REPLSET_INIT_OPLOG_ERR_MESS_REGEX = \
+  REPLSET_INIT_OPLOG_ERR_MESS_REGEX = \
           "^Database command 'replSetInitiate' failed: local.oplog.rs is not empty"
-  MONGODB_REPLSET_WAIT_STATE_ERR_MESS = "Transitioning Member Wait state"
-  MONGODB_REPLSET_INIT_WAIT_ERR_MESS = "Database command 'replSetGetStatus' failed:"+
+  REPLSET_WAIT_STATE_ERR_MESS = "Transitioning Member Wait state"
+  REPLSET_INIT_WAIT_ERR_MESS = "Database command 'replSetGetStatus' failed:"+
                                            " Received replSetInitiate - should come online shortly."
-  MONGODB_REPLSET_ALREADY_INIT_ERR_MESS_REGEX = "Database command '[\\w]+' failed:"+
+  REPLSET_ALREADY_INIT_ERR_MESS_REGEX = "Database command '[\\w]+' failed:"+
                                            " local.oplog.rs is not empty on the initiating member."+
                                            "  cannot initiate."
-  MONGODB_REPLSET_INVALID_STATE_ERR_MESS = 'Replica Set Member has INVALID state!'
+  REPLSET_INVALID_STATE_ERR_MESS = 'Replica Set Member has INVALID state!'
 
   # Number of attempts, and wait in seconds for each attempt, for MongoDB replica set member to
   # complete an initiation (i.e. following a 'replSetInitiate' command).
-  MONGODB_REPLSET_INIT_WAIT = 3
-  MONGODB_REPLSET_INIT_ATTEMPTS = 60
+  REPLSET_INIT_WAIT = 3
+  REPLSET_INIT_ATTEMPTS = 60
 
   # Number of attempts, and wait in seconds for each attempt, for MongoDB replica set member to
   # complete a reconfiguration (i.e. following a 'replSetReconfig' command).
-  MONGODB_REPLSET_RECONFIG_WAIT = 3
-  MONGODB_REPLSET_RECONFIG_ATTEMPTS = 60
+  REPLSET_RECONFIG_WAIT = 3
+  REPLSET_RECONFIG_ATTEMPTS = 60
 
   # MongoDB replic set member states that are considered to be a 'non-failed' state
-  MONGODB_NON_FAILED_STATES = [0,1,2,3,5,6,7,9]
+  NON_FAILED_STATES = [0,1,2,3,5,6,7,9]
 
   # MongoDB member states
-  MONGODB_STATES = {
+  STATES = {
       0  => 'STARTUP',
       1  => 'PRIMARY',
       2  => 'SECONDARY',
@@ -52,15 +52,16 @@ module MongoDB
       9  => 'ROLLBACK',
       10 => 'REMOVED'
   }
-  MONGODB_STATES.default = 'NONE'
+  STATES.default = 'NONE'
 
   # Number of attempts, and wait in seconds for each attempt, to connect to the replica set using
   # a host seed list
-  MONGODB_REPLSET_CONNECT_WAIT = 10
-  MONGODB_REPLSET_CONNECT_ATTEMPTS = 60
+  REPLSET_CONNECT_WAIT = 10
+  REPLSET_CONNECT_ATTEMPTS = 60
 
   # Maximum attempts to add this host to the replica set before giving up.
-  MONGODB_REPLSET_RECONFIG_MAX_ATTEMPTS = 240
+  REPLSET_RECONFIG_MAX_ATTEMPTS = 1
+  # TODO REPLSET_RECONFIG_MAX_ATTEMPTS = 240
 
 
   # Class to encapsulate complexities and detail of accessing a MongoDB Replica Set
@@ -73,7 +74,7 @@ module MongoDB
       def initialize(
           admin_user = nil,
           admin_password = nil,
-          mongodb_port = MONGODB_DEFAULT_PORT,
+          mongodb_port = DEFAULT_PORT,
           replSet_name )
 
           @this_host = Socket.gethostname
@@ -104,16 +105,27 @@ module MongoDB
 
       # Direct local connect on the current host
       def local_connect(auth=true)
-          @connection = MongoClient.new
-          @db = @connection['admin']
-          self.auth(@admin_user, @admin_password) if auth
+          @connection = if (auth)
+            Mongo::Client.new(
+              [ "127.0.0.1:#{@mongodb_port}"],
+              :database => 'admin',
+              :user => @admin_user,
+              :password => @admin_password
+            )
+          else
+            Mongo::Client.new(
+              [ "127.0.0.1:#{@mongodb_port}"],
+              :database => 'admin'
+            )
+          end
+          @connection.database
       end
 
       # Connect to the replica set via a host seed list
       def replSet_connect(mongodb_hosts=[@this_host_key], read_pref = :primary_preferred, auth=true)
           @connection = MongoReplicaSetClient.new(
                             mongodb_hosts,
-                            :connect_timeout => MONGODB_REPLSET_CONNECT_WAIT,
+                            :connect_timeout => REPLSET_CONNECT_WAIT,
                             :read => read_pref
           )
           @db = @connection['admin']
@@ -139,7 +151,7 @@ module MongoDB
                   @connection = MongoClient.new(
                             @connected_host,
                             @connected_port,
-                            :connect_timeout => MONGODB_REPLSET_CONNECT_WAIT
+                            :connect_timeout => REPLSET_CONNECT_WAIT
                   )
                   @db = @connection['admin']
               rescue
@@ -157,8 +169,8 @@ module MongoDB
       # Method to wait for the replica set member to transition to a specific set of states.
       def wait_member_state (
           expected_member_states = ['PRIMARY'],
-          max_wait_attempts = MONGODB_REPLSET_INIT_ATTEMPTS,
-          wait_time = MONGODB_REPLSET_INIT_WAIT
+          max_wait_attempts = REPLSET_INIT_ATTEMPTS,
+          wait_time = REPLSET_INIT_WAIT
       )
           wait_attempts = 0
           begin
@@ -167,20 +179,20 @@ module MongoDB
                   replSetThisMember = replSetMembers.find { |m| m['name'] == @this_host_key }
                   replSetMemberState = replSetThisMember['state']
               rescue
-                  replSetMemberState = MONGODB_STATES.invert['UNKOWN']
+                  replSetMemberState = STATES.invert['UNKOWN']
               end
               $logger.debug(
-                 "ReplSet Initiation Member State: #{MONGODB_STATES[replSetMemberState]}")
-              if not expected_member_states.include? MONGODB_STATES[replSetMemberState]
+                 "ReplSet Initiation Member State: #{STATES[replSetMemberState]}")
+              if not expected_member_states.include? STATES[replSetMemberState]
               then
-                  if MONGODB_NON_FAILED_STATES.include? replSetMemberState
+                  if NON_FAILED_STATES.include? replSetMemberState
                      # assume the member is transitioning to allowed state - wait
-                     raise Mongo::OperationFailure, MONGODB_REPLSET_WAIT_STATE_ERR_MESS
+                     raise Mongo::OperationFailure, REPLSET_WAIT_STATE_ERR_MESS
                   else
                       # an invalid state - raise an exception
                       raise Mongo::OperationFailure,
-                          "#{MONGODB_REPLSET_INVALID_STATE_ERR_MESS}" +
-                              " (State=>#{MONGODB_STATES[replSetMemberState]})"
+                          "#{REPLSET_INVALID_STATE_ERR_MESS}" +
+                              " (State=>#{STATES[replSetMemberState]})"
                   end
               end
           rescue Mongo::OperationFailure => rse
@@ -205,8 +217,8 @@ module MongoDB
           if not async
           then
               expected_member_states = ['PRIMARY']
-              max_wait_attempts = MONGODB_REPLSET_INIT_ATTEMPTS
-              wait_time = MONGODB_REPLSET_INIT_WAIT
+              max_wait_attempts = REPLSET_INIT_ATTEMPTS
+              wait_time = REPLSET_INIT_WAIT
               begin
                   # Given the replica set is being initiated on this server
                   # then it should become the primary - so wait for it to
@@ -219,7 +231,7 @@ module MongoDB
               rescue Mongo::OperationFailure => rse
                   $logger.debug("ReplSet Init Error: #{rse.message}")
                   @replSet_initiated = true if (
-                      rse.message =~ /#{MONGODB_REPLSET_INIT_FAILED_ERR_MESS_REGEX}/
+                      rse.message =~ /#{REPLSET_INIT_FAILED_ERR_MESS_REGEX}/
                   )
                   raise
               end
@@ -238,7 +250,7 @@ module MongoDB
               rescue => se
                   $logger.debug("Reconfig Status error:")
                   $logger.debug("#{se.message}")
-                  retry unless (reconfig_attempts += 1) >=  MONGODB_REPLSET_RECONFIG_ATTEMPTS
+                  retry unless (reconfig_attempts += 1) >=  REPLSET_RECONFIG_ATTEMPTS
                   raise
               end
           end
@@ -322,7 +334,7 @@ module MongoDB
                           ' No members will be removed from config.'
               end
               failed_members = self.get_status['members'].select \
-                   { |m| not (MONGODB_NON_FAILED_STATES.include? m['state'] and m['health'] == 1) }
+                   { |m| not (NON_FAILED_STATES.include? m['state'] and m['health'] == 1) }
               failed_members.map { |m| m['name'] }
           rescue NoMethodError, Mongo::OperationFailure
               []
@@ -330,7 +342,7 @@ module MongoDB
       end
 
       # Method to add and possibly remove existing member 'non-healthy' members.
-      def add_or_replace_member(hostname, visibility=true, mongodb_port=MONGODB_DEFAULT_PORT)
+      def add_or_replace_member(hostname, visibility=true, mongodb_port=DEFAULT_PORT)
 
           host_key = "#{hostname}:#{mongodb_port}"
 
@@ -376,8 +388,8 @@ module MongoDB
               raise
           end
           expected_member_states = ['PRIMARY','SECONDARY','STARTUP2']
-          max_wait_attempts = MONGODB_REPLSET_RECONFIG_ATTEMPTS
-          wait_time = MONGODB_REPLSET_RECONFIG_WAIT
+          max_wait_attempts = REPLSET_RECONFIG_ATTEMPTS
+          wait_time = REPLSET_RECONFIG_WAIT
           wait_member_state(
                  expected_member_states,
                  max_wait_attempts,
@@ -386,7 +398,7 @@ module MongoDB
 
       end
 
-      def add_this_host(visibility=true, mongodb_port=MONGODB_DEFAULT_PORT)
+      def add_this_host(visibility=true, mongodb_port=DEFAULT_PORT)
           $logger.debug("Attempting to add #@this_host_ip to Replica Set...")
           self.add_or_replace_member(@this_host_ip, visibility, mongodb_port)
       end
@@ -448,7 +460,7 @@ module MongoDB
           @replSet_found = false
           if mongodb_host_seed_list.any?
           then
-              (1..MONGODB_REPLSET_CONNECT_ATTEMPTS).each do | find_attempts |
+              (1..REPLSET_CONNECT_ATTEMPTS).each do | find_attempts |
                   # Attempt to connect to the Replica Set using the seed list
                   # Assumption: if this succeeds then the replica set has already been initiated
                   # previously and the service can be located on the network
@@ -465,13 +477,13 @@ module MongoDB
                       $logger.debug('Failed to connect to MongoDB replica set.....')
                       $logger.debug("#{rsce.message}")
                       # possible network glitches where the other members can't be reached.
-                      if find_attempts < MONGODB_REPLSET_CONNECT_ATTEMPTS
+                      if find_attempts < REPLSET_CONNECT_ATTEMPTS
                       then
-                         $logger.debug("Sleeping for #{MONGODB_REPLSET_CONNECT_WAIT} seconds.....")
-                         sleep(MONGODB_REPLSET_CONNECT_WAIT)
+                         $logger.debug("Sleeping for #{REPLSET_CONNECT_WAIT} seconds.....")
+                         sleep(REPLSET_CONNECT_WAIT)
                          $logger.debug( "Trying again.")
                          $logger.debug( "Failed attempts #{find_attempts} "+
-                             "of #{MONGODB_REPLSET_CONNECT_ATTEMPTS}.....")
+                             "of #{REPLSET_CONNECT_ATTEMPTS}.....")
                       else
                          $logger.debug('Replica Set can not be located on the network!!')
                       end

@@ -27,6 +27,7 @@ module AwsHelper
 
   class Metadata
     @@backoff = lambda { |num_failures| Kernel.sleep(1.2 ** num_failures) }
+    @retries = 3
 
     def self.open_connection
       http = Net::HTTP.new('169.254.169.254', 80, nil)
@@ -76,5 +77,6 @@ module AwsHelper
 
     def self.instance_id
       get_metadata("/latest/meta-data/instance-id")
+    end
   end
 end

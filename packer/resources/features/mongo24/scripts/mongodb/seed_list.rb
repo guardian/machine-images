@@ -5,48 +5,109 @@
 # This should probably use a more comprehensive service discovery mechanism but for now we simply
 # maintain a list of replica set hosts in S3.
 #
+require 'aws-sdk'
+
 module MongoDB
   class SeedList
 
-    def initialize(s3, stage, replSet_name, this_host_key)
-      @s3 = s3
-      @stage = stage
+    def initialize(table_name, replSet_name)
+      @seedlist_table_name = table_name
       @replSet_name = replSet_name
-      @this_host_key = this_host_key
-      @mongodb_hosts_bucket = s3.buckets[MONGODB_HOSTS_BUCKET_NAME]
-      @mongodb_hosts_bucket_dir = "#@stage/#@replSet_name"
-      #
-      # Construct a host seed list from S3 that will be used to try and connect to the
-      # replica set initially at least
-      #
-      super()
-      @mongodb_hosts_bucket.objects.each do |host|
-          self << host.key.split('/')[-1] \
-              if host.key =~ /^#@mongodb_hosts_bucket_dir\/[\w.-]+:\d+$/
-      end
+      ensure_table_exists
+    end
+
+    def seeds
+      fetch_seed_list(@replSet_name)
     end
 
     def add(obj)
-      @mongodb_hosts_bucket.objects["#@mongodb_hosts_bucket_dir/#{obj}"].write(obj)
-      super
+      current = seeds
+      if current.include?(obj)
+        current
+      else
+        update_seed_list(@replSet_name, current, current + [obj])
+        seeds
+      end
     end
 
-    def delete(obj)
-      @mongodb_hosts_bucket.objects["#@mongodb_hosts_bucket_dir/#{obj}"].delete()
-      super
+    def remove(obj)
+      current = seeds
+      if current.include?(obj)
+        update_seed_list(@replSet_name, current, current - [obj])
+        seeds
+      else
+        current
+      end
     end
 
-    # NOTE: The Set object does not use the class's delete method for delete_if and keep_if so
-    # both need to be overridden here.
-    def delete_if
-      block_given? or return enum_for(__method__)
-      to_a.each { |o| delete(o) if yield(o) }
-      self
+    def update_seed_list(name, old_list, new_list)
+      dynamo.update_item(
+        :table_name => @seedlist_table_name,
+        :key => { :SeedListName => name },
+        :update_expression => "SET SeedList = :new_list",
+        :condition_expression => "SeedList = :old_list",
+        :expression_attribute_values => { ":old_list" => old_list, ":new_list" => new_list }
+      )
     end
-    def keep_if
-      block_given? or return enum_for(__method__)
-      to_a.each { |o| delete(o) unless yield(o) }
-      self
+
+    def fetch_seed_list(name)
+      seed_record = dynamo.get_item(
+        :table_name => @seedlist_table_name,
+        :key => { :SeedListName => name },
+        :consistent_read => true,
+      ).data.item
+
+      if !seed_record.nil?
+        # return the seed list
+        seed_record["SeedList"]
+      else
+        begin
+          dynamo.put_item(
+            :table_name => @seedlist_table_name,
+            :item => { SeedListName: name, SeedList: [] },
+            :expected => { "SeedListName" => { comparison_operator: "NULL" } }
+          )
+          puts "added default record"
+        rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
+          puts "record exists"
+        end
+        fetch_seed_list(name)
+      end
+    end
+
+
+    def ensure_table_exists
+      ## Create the table if it doesn't exist
+      begin
+        dynamo.describe_table(:table_name => @seedlist_table_name)
+      rescue Aws::DynamoDB::Errors::ResourceNotFoundException
+        dynamo.create_table(
+          :table_name => @seedlist_table_name,
+          :attribute_definitions => [
+            {
+              :attribute_name => :SeedListName,
+              :attribute_type => :S
+            }
+          ],
+          :key_schema => [
+            {
+              :attribute_name => :SeedListName,
+              :key_type => :HASH
+            }
+          ],
+          :provisioned_throughput => {
+            :read_capacity_units => 10,
+            :write_capacity_units => 10,
+          }
+        )
+
+        # wait for table to be created
+        dynamo.wait_until(:table_exists, table_name: @seedlist_table_name)
+      end
+    end
+
+    def dynamo
+      @db ||= Aws::DynamoDB::Client.new
     end
 
   end

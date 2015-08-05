@@ -95,9 +95,9 @@ module Locksmith
             :item => { LockName: name, Locked: 0 },
             :expected => { "LockName" => { comparison_operator: "NULL" } }
           )
-          puts "added default record"
+          log(at: "added_default_record", table: @lock_table_name, name: name)
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          puts "record exists"
+          log(at: "record_exists", table: @lock_table_name, name: name)
         end
         fetch_lock(name)
       end
@@ -123,8 +123,8 @@ module Locksmith
             }
           ],
           :provisioned_throughput => {
-            :read_capacity_units => 1,
-            :write_capacity_units => 1,
+            :read_capacity_units => 10,
+            :write_capacity_units => 10,
           }
         )
 
