@@ -19,7 +19,7 @@ require 'ostruct'
 require 'shellwords'
 require_relative 'locksmith/dynamodb'
 require_relative 'mongodb/repl_set'
-require_relative 'mongodb/seed_list'
+require_relative 'mongodb/rs_config'
 require_relative 'aws/helpers'
 
 ## Set sys logger facility
@@ -59,22 +59,6 @@ def parse_options(args)
             opts.separator ""
             opts.separator "Specific options:"
 
-            opts.on("-s", "--stage STAGE", "Environment stage name") do |stage|
-              options.stage = stage
-            end
-
-            opts.on("-k", "--stack STACK", "Stack name") do |stack|
-              options.stack = stack
-            end
-
-            opts.on("-a", "--app APP", "App name") do |app|
-              options.app = app
-            end
-
-            opts.on("-u", "--username USERNAME",
-            "MongoDB admin username") do |admin_user|
-                options.admin_user = admin_user
-            end
             opts.on("-Z", "--zone_visibility_mask 'abc'",
             "AZ secondary member visibility mask (combination of a+b+c)") do |v|
                 options.visibility_mask = string_to_visibility_mask(v)
@@ -94,12 +78,6 @@ def parse_options(args)
         raise "Non-empty list of arguments **(#{args})**" if !args.empty?
 
         options.debug_mode = options.debug_mode || false
-        options.stage = options.stage || get_tag("Stage")
-        options.stack = options.stack || get_tag("Stack")
-        options.app = options.app || get_tag("App")
-        options.admin_user ||= 'aws_admin'
-        options.replSet_name = [ options.stack, options.app, options.stage ].join('-')
-        options.mongodb_port = MongoDB::DEFAULT_PORT
         options.visibility_mask ||= string_to_visibility_mask("abc")
 
     rescue => e
@@ -172,23 +150,12 @@ options = parse_options(ARGV)
 $logger = setup_logger(options.debug_mode)
 $logger.info('MongoDB Add Replica Set Member.....')
 
-# Passing admin password via env. is mandatory.
-admin_password = ENV.fetch('MONGODB_ADMIN_PASSWORD', nil)
-if not admin_password
-then
-    $logger.err('FAILED: $MONGODB_ADMIN_PASSWORD must be set!!')
-    raise 'FAILED: $MONGODB_ADMIN_PASSWORD must be set!!'
-end
-
 availability_zone = AwsHelper::Metadata::availability_zone[-1..-1]
+replica_set_config = MongoDB::ReplicaSetConfig.new
 
 # Set up MongoDB replica set object
-mongodb_replSet = MongoDB::ReplicaSet.new(
-    options.admin_user,
-    admin_password,
-    options.mongodb_port,
-    options.replSet_name
-)
+mongodb_replSet = MongoDB::ReplicaSet.new(replica_set_config)
+
 this_host_key = mongodb_replSet.this_host_key
 
 locksmith = Locksmith::Dynamodb.new(
@@ -198,20 +165,15 @@ locksmith = Locksmith::Dynamodb.new(
   ttl = 3600
 )
 
-seed_list = MongoDB::SeedList.new(
-  table_name = "mongo-seedlists",
-  replSet_name = options.replSet_name
-)
-
 lock_attempts = 0
 
-locksmith.lock(options.replSet_name) do
+locksmith.lock(replica_set_config.name) do
     # lock taken using the replica set name
     rs_add_attempts = 0
     begin
 
         # Get the mongodb host seed list from S3
-        mongodb_host_seed_list = seed_list.seeds
+        mongodb_host_seed_list = replica_set_config.seeds
 
         # Use the seed list to attempt to find the replica set on the network
         mongodb_replSet.find_replSet_service(mongodb_host_seed_list)

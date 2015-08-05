@@ -9,7 +9,7 @@ module MongoDB
   # WARNING: This script has been tested ONLY against:
   #           MongoDB v2.4; ruby mongo driver v1.12.0; aws-sdk v1.63.0 and ruby v2.0.0p598.
   #       The Ruby driver for this combined stack does not appear to properly return MongoDB server
-  #       error codes when an exception is raised by the server. The sript therefore relies
+  #       error codes when an exception is raised by the server. The script therefore relies
   #       on parsing the error messages returned which may of course change in future versions
   #       of either MongoDB or the other software used by this script.
 
@@ -71,16 +71,11 @@ module MongoDB
       attr_reader :this_host_key, :auth_active, :replSet_name, :replSet_initiated,
                   :replSet_found, :replSet_primary_found, :init_config
 
-      def initialize(
-          admin_user = nil,
-          admin_password = nil,
-          mongodb_port = DEFAULT_PORT,
-          replSet_name )
-
+      def initialize(config)
           @this_host = Socket.gethostname
           @this_host_ip = IPSocket.getaddress(@this_host)
-          @replSet_name = replSet_name
-          @mongodb_port = mongodb_port
+          @replSet_name = config.name
+          @mongodb_port = DEFAULT_PORT
           @this_host_key = "#@this_host_ip:#@mongodb_port"
           @connection
           @connected_host
@@ -94,31 +89,49 @@ module MongoDB
           @replSet_primary_found = false
           @replSet_initiated = false
           @this_host_added = false
-          @admin_user = admin_user
-          @admin_password = admin_password
+
+          rs_security = config.security_data
+          @admin_user = rs_security[:admin_user]
+          @admin_password = rs_security[:admin_password]
           @init_config = {
               "_id" => @replSet_name,
               'members' => [{ '_id' => 0, 'host' => @this_host_key }]
           }
+      end
 
+      def local_auth_connect
+        @connection = Mongo::Client.new(
+          [ "127.0.0.1:#{@mongodb_port}"],
+          :database => 'admin',
+          :user => @admin_user,
+          :password => @admin_password
+        )
+        @db = @connection.database
+      end
+
+      def local_admin_init
+        auth_bypass_conn = Mongo::Client.new(
+          [ "127.0.0.1:#{@mongodb_port}"],
+          :database => 'admin'
+        )
+        auth_bypass_conn.database.users.create(
+          @admin_user,
+          password: @admin_password,
+          roles: [ '' ]
+        )
       end
 
       # Direct local connect on the current host
-      def local_connect(auth=true)
-          @connection = if (auth)
-            Mongo::Client.new(
-              [ "127.0.0.1:#{@mongodb_port}"],
-              :database => 'admin',
-              :user => @admin_user,
-              :password => @admin_password
-            )
-          else
-            Mongo::Client.new(
-              [ "127.0.0.1:#{@mongodb_port}"],
-              :database => 'admin'
-            )
-          end
-          @connection.database
+      def local_connect
+        begin
+          local_auth_connect
+        rescue Mongo::Auth::Unauthorized => auth
+          # this is likely to be that the admin user has not yet been created
+          # so lets try to do that
+          local_admin_init
+          # now try again
+          local_auth_connect
+        end
       end
 
       # Connect to the replica set via a host seed list
@@ -195,7 +208,7 @@ module MongoDB
                               " (State=>#{STATES[replSetMemberState]})"
                   end
               end
-          rescue Mongo::OperationFailure => rse
+          rescue Mongo::Error::OperationFailure => rse
               $logger.debug("ReplSet Member Wait State Error: #{rse.message}")
               if (wait_attempts += 1) < max_wait_attempts
               then
