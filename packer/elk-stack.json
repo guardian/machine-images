@@ -5,7 +5,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-b17a12c6"
+    "euw1_source_ami": "ami-4aa8ea3d"
   },
   "builders": [
     {
@@ -38,7 +38,7 @@
     },
     {
       "type": "shell",
-      "script": "resources/ubuntu-trusty.sh",
+      "script": "resources/ubuntu-vivid.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
     },
     {
