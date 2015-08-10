@@ -35,4 +35,4 @@ ${SCRIPTPATH}/scripts/mongodb_fetch_keyfile.rb > ${KEY_FILE}
 systemctl restart mongodb
 
 # Run the replica set initialisation script
-# ${SCRIPTPATH}/scripts/mongod_add_self_to_replset.rb
+${SCRIPTPATH}/scripts/mongod_add_self_to_replset.rb
