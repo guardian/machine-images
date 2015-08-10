@@ -68,13 +68,14 @@ module MongoDB
   class ReplicaSet
 
     attr_accessor :this_host_added
-    attr_reader :this_host_key, :replSet_name,
+    attr_reader :this_host_key, :name,
                 :replSet_primary_found, :init_config, :config
 
     def initialize(config)
       @config = config
       this_host_ip = IPSocket.getaddress(Socket.gethostname)
       @this_host_key = "#{this_host_ip}:#{DEFAULT_PORT}"
+
       @client
       @connected_host
       @connected_port
@@ -84,11 +85,12 @@ module MongoDB
       @replSet_primary_found = false
       @this_host_added = false
 
+      @name = config.name
       rs_security = config.security_data
       @admin_user = rs_security[:admin_user]
       @admin_password = rs_security[:admin_password]
       @init_config = {
-        "_id" => @replSet_name,
+        "_id" => @name,
         'members' => [{ '_id' => 0, 'host' => @this_host_key }]
       }
     end
