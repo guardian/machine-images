@@ -367,6 +367,9 @@ module MongoDB
     # Either a connection is made to the primary or a local connection is made
     # (if only secondaries or local connections are available).
     def connect
+      # TODO - when 2.1.0 is released:
+      # @client.close unless @client.nil?
+      
       seed_list = config.seeds
       if !seed_list.empty?
       then

@@ -216,11 +216,13 @@ locksmith.lock(replica_set_config.name) do
         unless replica_set.replica_set?
 
     # Delete any members in the seed list which are no longer in the replica set config
-    all_members = replica_set.member_names
-    ghost_members = replica_set_config.seeds.reject { |m| all_members.include?(m) }
-    ghost_members.each { |g|
-      $logger.debug("Removing #{g} from seed list")
-      replica_set_config.remove_seed(g)
+    if replica_set.replica_set_connection?
+      all_members = replica_set.member_names
+      ghost_members = replica_set_config.seeds.reject { |m| all_members.include?(m) }
+      ghost_members.each { |g|
+        $logger.debug("Removing #{g} from seed list")
+        replica_set_config.remove_seed(g)
+      }
     }
 
     # Attempt to reconfigure the replica set again for a few times unless a fatal error occurs
