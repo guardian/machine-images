@@ -109,29 +109,29 @@ def setup_logger(debug_mode=false)
     return logger
 end
 
-# Method to initiate the replica set (essentially a wrapper for the 'replSetinitate' command).
-def initiate_replSet(mongodb_replSet)
+# Method to initiate the replica set
+# (essentially a wrapper for the 'replSetinitate' command).
+def initiate(replica_set)
+  config = replica_set.config
 
-    if mongodb_replSet.is_replSet() and not mongodb_replSet.is_this_replSet()
-    then
-        raise FatalError, 'Member already belongs to a different Replica Set?!'
-    end
-
-    if mongodb_replSet.is_this_replSet()
-    then
-        $logger.debug 'Mongodb Replica set already inititated...'
+  if replica_set.replica_set?
+    if replica_set.name != config.name
+      raise FatalError, 'Member already belongs to a different Replica Set?!'
     else
-        async = false
-        begin
-            mongodb_replSet.replSet_initiate(async)
-        rescue Mongo::Error::OperationFailure => rinit
-            $logger.debug 'Failed to initiate Replica Set...'
-            $logger.debug rinit.message
-            raise
-        end
-        $logger.debug 'Mongodb Replica set inititated...'
-        mongodb_replSet.this_host_added = true
-   end
+      $logger.debug 'Mongodb Replica set already inititated...'
+      return
+    end
+  end
+
+  begin
+    replica_set.initiate(false)
+    replica_set.connect
+  rescue Mongo::Error::OperationFailure => rinit
+    $logger.debug 'Failed to initiate Replica Set...'
+    $logger.debug rinit.message
+    raise
+  end
+  $logger.debug 'Mongodb Replica set inititated...'
 end
 
 ## main
@@ -154,9 +154,7 @@ availability_zone = AwsHelper::Metadata::availability_zone[-1..-1]
 replica_set_config = MongoDB::ReplicaSetConfig.new
 
 # Set up MongoDB replica set object
-mongodb_replSet = MongoDB::ReplicaSet.new(replica_set_config)
-
-this_host_key = mongodb_replSet.this_host_key
+replica_set = MongoDB::ReplicaSet.new(replica_set_config)
 
 locksmith = Locksmith::Dynamodb.new(
   lock_table_name = "mongo-initialisation",
@@ -167,83 +165,82 @@ locksmith = Locksmith::Dynamodb.new(
 
 lock_attempts = 0
 
+# first of all, check that authentication has been set up on the local
+# instance
+
+
 locksmith.lock(replica_set_config.name) do
-    # lock taken using the replica set name
-    rs_add_attempts = 0
-    begin
+  # lock taken using the replica set name
+  rs_add_attempts = 0
+  begin
+    replica_set.connect
+    seed_list = replica_set_config.seeds
 
-        # Get the mongodb host seed list from S3
-        mongodb_host_seed_list = replica_set_config.seeds
+    if seed_list.empty?
+    then
+      ## Assume from this point on that we may need to initiate the replica set
+      ## but only if the seed list is empty which implies the replica set has not
+      ## been deployed before.
+      $logger.debug('WARNING: Host Seed List is empty....initiating Replica Set!')
+      initiate(replica_set)
+      $logger.debug('Replica Set inititated')
 
-        # Use the seed list to attempt to find the replica set on the network
-        mongodb_replSet.find_replSet_service(mongodb_host_seed_list)
-
-        if !mongodb_host_seed_list.empty?
-        then
-            ## If this member hasn't been added (in case when replica set had already
-            #  been inititated) then add it now
-            mongodb_replSet.add_this_host(options.visibility_mask[availability_zone]) \
-                unless mongodb_replSet.this_host_is_replSet_member()
-        else
-            ## Assume from this point on that we may need to initiate the replica set
-            ## but only if the seed list is empty which implies the replica set has not
-            ## been deployed before.
-            $logger.debug('WARNING: Host Seed List is empty....initiating Replica Set!')
-            initiate_replSet(mongodb_replSet)
-            $logger.debug('Replica Set inititated')
-
-            # Add Admin User account if not already added.
-            if not mongodb_replSet.auth_active
-            then
-                $logger.debug('Adding admin user....')
-                begin
-                    mongodb_replSet.add_admin_user()
-                    $logger.debug('Admin user added.')
-                rescue => e
-                    $logger.debug('Failed to add admin user.')
-                    $logger.debug(e.message)
-                    raise
-                end
-            end
+      # Add Admin User account if not already added.
+      if !replica_set.authed?
+      then
+        $logger.debug('Adding admin user....')
+        begin
+          replica_set.create_admin_user()
+          $logger.debug('Admin user added.')
+        rescue => e
+          $logger.debug('Failed to add admin user.')
+          $logger.debug(e.message)
+          raise
         end
+      end
+    else
+      ## If this member hasn't been added (in case when replica set had already
+      #  been inititated) then add it now
+      replica_set.add_this_host(options.visibility_mask[availability_zone]) \
+          unless replica_set.member?(replica_set.this_host_key)
+    end
 
-        # By now it should be possible to connect directly to the replica set
-        # This serves as an assertion that the member has been added successfully
-        mongodb_replSet.find_replSet_service([this_host_key])
-        raise FatalError, 'Could not connect to newly configured Replica Set' \
-            unless mongodb_replSet.replSet_found
+    # Add the member to the seed list.
+    $logger.debug("Ensuring #{replica_set.this_host_key} is in seed list")
+    replica_set_config.add_seed(replica_set.this_host_key)
 
-        # Add the member to the seed list.
-        seed_list.add(this_host_key)
+    # By now it should be possible to connect directly to the replica set
+    # This serves as an assertion that the member has been added successfully
+    replica_set.connect
+    raise FatalError, 'Could not connect to newly configured Replica Set' \
+        unless replica_set.replica_set?
 
-        # Delete any members in the seed list which are no longer in the replica set config
-        ghost_members = seed_list.seeds.reject { |m| mongodb_replSet.is_replSet_member(m) }
-        ghost_members.each { |g| seed_list.remove(g) }
-
-        # Check we still have the lock - if not something's gone badly wrong.
-        raise FatalError, 'MongoDB Replica Set Initiation/Config. sync. Lock Error' \
-            unless replSetConfLock.this_host_has_lock()
+    # Delete any members in the seed list which are no longer in the replica set config
+    all_members = replica_set.member_names
+    ghost_members = replica_set_config.seeds.reject { |m| all_members.include?(m) }
+    ghost_members.each { |g|
+      $logger.debug("Removing #{g} from seed list")
+      replica_set_config.remove_seed(g)
+    }
 
     # Attempt to reconfigure the replica set again for a few times unless a fatal error occurs
     rescue FatalError => fe
-        $logger.debug("FATAL Error. Cannot continue:")
-        $logger.debug("#{fe.message}")
-        raise
+      $logger.debug("FATAL Error. Cannot continue:")
+      $logger.debug("#{fe.message}")
+      raise
     rescue => ce
-        if (rs_add_attempts += 1) < MongoDB::REPLSET_RECONFIG_MAX_ATTEMPTS
-        then
-            $logger.debug('Failed to add MongoDB Replica Set Member.....'+
-                "(attempt = #{rs_add_attempts})")
-            $logger.debug("#{ce.message}")
-            $logger.debug("Sleeping for #{MongoDB::REPLSET_CONNECT_WAIT} seconds.....")
-            sleep(MongoDB::REPLSET_CONNECT_WAIT)
-            retry
-        end
-        $logger.info("FAILED: #{ce.message}")
-        $logger.info("EXITING...")
-        raise
-    ensure
-       mongodb_replSet.logout()
+      if (rs_add_attempts += 1) < MongoDB::REPLSET_RECONFIG_MAX_ATTEMPTS
+      then
+        $logger.debug('Failed to add MongoDB Replica Set Member.....'+
+            "(attempt = #{rs_add_attempts})")
+        $logger.debug("#{ce.message}")
+        $logger.debug("Sleeping for #{MongoDB::REPLSET_CONNECT_WAIT} seconds.....")
+        sleep(MongoDB::REPLSET_CONNECT_WAIT)
+        retry
+      end
+      $logger.info("FAILED: #{ce.message}")
+      $logger.info("EXITING...")
+      raise
     end
 end
 

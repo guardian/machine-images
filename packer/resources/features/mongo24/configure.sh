@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 # Script to configure a mongo node
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 
@@ -15,12 +17,19 @@ export STAGE=$(sub "tag.Stage")
 export APP=$(sub "tag.App")
 
 # Install the config file to /etc/mongodb.conf
-touch /etc/mongod.conf
-chmod 444 /etc/mongod.conf
-erb -T - ${SCRIPTPATH}/mongod.conf.erb > /etc/mongod.conf
+CONFIG_FILE=/etc/mongodb.conf
+cp ${CONFIG_FILE} ${CONFIG_FILE}.original
+touch ${CONFIG_FILE}
+chmod 444 ${CONFIG_FILE}
+erb -T - ${SCRIPTPATH}/mongodb.conf.erb > ${CONFIG_FILE}
 
 # Install the replica set key file
-${SCRIPTPATH}/scripts/mongodb_install_keyfile.rb
+KEY_FILE=/var/lib/mongodb/keyFile
+touch ${KEY_FILE}
+chown mongodb:mongodb ${KEY_FILE}
+chmod u+r,og-rwx ${KEY_FILE}
+${SCRIPTPATH}/scripts/mongodb_fetch_keyfile.rb > ${KEY_FILE}
+
 
 # Restart mongodb
 systemctl restart mongodb

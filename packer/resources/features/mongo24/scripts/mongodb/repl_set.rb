@@ -67,117 +67,87 @@ module MongoDB
   # Class to encapsulate complexities and detail of accessing a MongoDB Replica Set
   class ReplicaSet
 
-      attr_accessor :this_host_added
-      attr_reader :this_host_key, :auth_active, :replSet_name, :replSet_initiated,
-                  :replSet_found, :replSet_primary_found, :init_config
+    attr_accessor :this_host_added
+    attr_reader :this_host_key, :replSet_name,
+                :replSet_primary_found, :init_config, :config
 
-      def initialize(config)
-          @this_host = Socket.gethostname
-          @this_host_ip = IPSocket.getaddress(@this_host)
-          @replSet_name = config.name
-          @mongodb_port = DEFAULT_PORT
-          @this_host_key = "#@this_host_ip:#@mongodb_port"
-          @connection
-          @connected_host
-          @connected_port
-          @connected_host_key
-          @db
-          @primary
-          @secondaries
-          @auth_active
-          @replSet_found = false
-          @replSet_primary_found = false
-          @replSet_initiated = false
-          @this_host_added = false
+    def initialize(config)
+      @config = config
+      this_host_ip = IPSocket.getaddress(Socket.gethostname)
+      @this_host_key = "#{this_host_ip}:#{DEFAULT_PORT}"
+      @client
+      @connected_host
+      @connected_port
+      @connected_host_key
+      @primary
+      @secondaries
+      @replSet_primary_found = false
+      @this_host_added = false
 
-          rs_security = config.security_data
-          @admin_user = rs_security[:admin_user]
-          @admin_password = rs_security[:admin_password]
-          @init_config = {
-              "_id" => @replSet_name,
-              'members' => [{ '_id' => 0, 'host' => @this_host_key }]
-          }
+      rs_security = config.security_data
+      @admin_user = rs_security[:admin_user]
+      @admin_password = rs_security[:admin_password]
+      @init_config = {
+        "_id" => @replSet_name,
+        'members' => [{ '_id' => 0, 'host' => @this_host_key }]
+      }
+    end
+
+    # Direct local connect on the current host
+    def local_connect_auth
+      return Mongo::Client.new(
+        [ "127.0.0.1:#{DEFAULT_PORT}"],
+        :database => 'admin',
+        :user => @admin_user,
+        :password => @admin_password,
+        :connect_timeout => REPLSET_CONNECT_WAIT,
+        # override connection mode (otherwise it detects a replicaset)
+        :connect => :direct
+      )
+    end
+
+    def local_connect_bypass
+      return Mongo::Client.new(
+        [ "127.0.0.1:#{DEFAULT_PORT}"],
+        :database => 'admin',
+        :connect_timeout => REPLSET_CONNECT_WAIT,
+        # override connection mode (otherwise it detects a replicaset)
+        :connect => :direct
+      )
+    end
+
+    def local_connect
+      client = local_connect_auth
+      if has_admin?(client)
+        $logger.debug("Connected locally with auth")
+        return client
+      else
+        $logger.debug("Connected locally using auth bypass")
+        return local_connect_bypass
       end
+    end
 
-      def local_auth_connect
-        @connection = Mongo::Client.new(
-          [ "127.0.0.1:#{@mongodb_port}"],
-          :database => 'admin',
-          :user => @admin_user,
-          :password => @admin_password
-        )
-        @db = @connection.database
+    def has_admin?(client)
+      begin
+        client.database.collections
+        return true
+      rescue Mongo::Auth::Unauthorized => noauth
+        return false
       end
+    end
 
-      def local_admin_init
-        auth_bypass_conn = Mongo::Client.new(
-          [ "127.0.0.1:#{@mongodb_port}"],
-          :database => 'admin'
-        )
-        auth_bypass_conn.database.users.create(
-          @admin_user,
-          password: @admin_password,
-          roles: [ '' ]
-        )
-      end
-
-      # Direct local connect on the current host
-      def local_connect
-        begin
-          local_auth_connect
-        rescue Mongo::Auth::Unauthorized => auth
-          # this is likely to be that the admin user has not yet been created
-          # so lets try to do that
-          local_admin_init
-          # now try again
-          local_auth_connect
-        end
-      end
-
-      # Connect to the replica set via a host seed list
-      def replSet_connect(mongodb_hosts=[@this_host_key], read_pref = :primary_preferred, auth=true)
-          @connection = MongoReplicaSetClient.new(
-                            mongodb_hosts,
-                            :connect_timeout => REPLSET_CONNECT_WAIT,
-                            :read => read_pref
-          )
-          @db = @connection['admin']
-          @primary = @connection.primary
-          @secondaries = @connection.secondaries
-          if @connection.primary?
-          then
-              @connected_host = @primary[0]
-              @connected_port = @primary[1]
-              @connected_host_key = "#@connected_host:#@connected_port"
-              @replSet_primary_found = true
-          else
-              # NOTE: The driver doesn't appear to honour the read preference if
-              # for any reason, the primary is not available.
-              # It is uncertain if this is a feature or bug but for
-              # reads to succeed (e.g. the rs.config) a direct re-connection
-              # to the secondary is required here for secondary reads to succeed.
-              @replSet_primary_found = false
-              @connected_host_key = self.is_master()['me']
-              @connected_host = @connected_host_key.split(':')[0]
-              @connected_port = @connected_host_key.split(':')[1]
-              begin
-                  @connection = MongoClient.new(
-                            @connected_host,
-                            @connected_port,
-                            :connect_timeout => REPLSET_CONNECT_WAIT
-                  )
-                  @db = @connection['admin']
-              rescue
-                  @connected_host_key = @connected_host = @connected_port = @connection = nil
-              end
-          end
-          $logger.debug(
-              "Connnected to host #@connected_host_key" +
-              " (*#{@replSet_primary_found ? 'PRIMARY' : 'SECONDARY'}*)."
-          )
-          $logger.debug("Authenticating Admin (*#@admin_user*)...")
-          self.auth(@admin_user, @admin_password) if auth
-      end
+    # Connect to the replica set via a host seed list
+    def replica_set_connect(mongodb_hosts, read_pref = :primary_preferred)
+      return Mongo::Client.new(
+        mongodb_hosts,
+        :user => @admin_user,
+        :password => @admin_password,
+        :connect_timeout => REPLSET_CONNECT_WAIT,
+        :read => {:mode => read_pref},
+        :replica_set => @config.name,
+        :connect => :replica_set
+      )
+    end
 
       # Method to wait for the replica set member to transition to a specific set of states.
       def wait_member_state (
@@ -185,73 +155,63 @@ module MongoDB
           max_wait_attempts = REPLSET_INIT_ATTEMPTS,
           wait_time = REPLSET_INIT_WAIT
       )
-          wait_attempts = 0
+        wait_attempts = 0
+        while wait_attempts < max_wait_attempts
           begin
-              begin
-                  replSetMembers = self.get_status()['members']
-                  replSetThisMember = replSetMembers.find { |m| m['name'] == @this_host_key }
-                  replSetMemberState = replSetThisMember['state']
-              rescue
-                  replSetMemberState = STATES.invert['UNKOWN']
-              end
-              $logger.debug(
-                 "ReplSet Initiation Member State: #{STATES[replSetMemberState]}")
-              if not expected_member_states.include? STATES[replSetMemberState]
-              then
-                  if NON_FAILED_STATES.include? replSetMemberState
-                     # assume the member is transitioning to allowed state - wait
-                     raise Mongo::OperationFailure, REPLSET_WAIT_STATE_ERR_MESS
-                  else
-                      # an invalid state - raise an exception
-                      raise Mongo::OperationFailure,
-                          "#{REPLSET_INVALID_STATE_ERR_MESS}" +
-                              " (State=>#{STATES[replSetMemberState]})"
-                  end
-              end
-          rescue Mongo::Error::OperationFailure => rse
-              $logger.debug("ReplSet Member Wait State Error: #{rse.message}")
-              if (wait_attempts += 1) < max_wait_attempts
-              then
-                  sleep(wait_time)
-                  retry
-              end
-              raise
+            replSetMembers = self.get_status()['members']
+            replSetThisMember = replSetMembers.find { |m| m['name'] == @this_host_key }
+            replSetMemberState = replSetThisMember['state']
+          rescue
+            replSetMemberState = STATES.invert['UNKNOWN']
           end
+          $logger.debug("ReplSet Initiation Member State: #{STATES[replSetMemberState]}")
+
+          return if expected_member_states.include? STATES[replSetMemberState]
+
+          if ! NON_FAILED_STATES.include? replSetMemberState
+            # an invalid state - raise an exception
+            "#{REPLSET_INVALID_STATE_ERR_MESS} (State=>#{STATES[replSetMemberState]})"
+            $logger.debug("ReplSet Member Wait State Error: #{rse.message}")
+            raise Mongo::OperationFailure,
+                "#{REPLSET_INVALID_STATE_ERR_MESS}" +
+                    " (State=>#{STATES[replSetMemberState]})"
+          end
+          wait_attempts++
+          sleep(wait_time)
+        end
       end
 
       # Initiate the Replica Set - this is an asynchronous process so if the
       # async parameter is false this method will wait until the initiation is complete
-      def replSet_initiate(async=true)
+      def initiate(async=true)
+        @client.database.command(:replSetInitiate => @init_config)
 
-          init_attempts=0
-
-          @db.command({"replSetInitiate" => @init_config })
-
-          if not async
-          then
-              expected_member_states = ['PRIMARY']
-              max_wait_attempts = REPLSET_INIT_ATTEMPTS
-              wait_time = REPLSET_INIT_WAIT
-              begin
-                  # Given the replica set is being initiated on this server
-                  # then it should become the primary - so wait for it to
-                  # transition to the primary state
-                  wait_member_state(
-                     expected_member_states,
-                     max_wait_attempts,
-                     wait_time
-                  )
-              rescue Mongo::OperationFailure => rse
-                  $logger.debug("ReplSet Init Error: #{rse.message}")
-                  @replSet_initiated = true if (
-                      rse.message =~ /#{REPLSET_INIT_FAILED_ERR_MESS_REGEX}/
-                  )
-                  raise
-              end
+        if not async
+        then
+          expected_member_states = ['PRIMARY']
+          max_wait_attempts = REPLSET_INIT_ATTEMPTS
+          wait_time = REPLSET_INIT_WAIT
+          begin
+            # Given the replica set is being initiated on this server
+            # then it should become the primary - so wait for it to
+            # transition to the primary state
+            wait_member_state(
+               expected_member_states,
+               max_wait_attempts,
+               wait_time
+            )
+          rescue Mongo::Error::OperationFailure => rse
+            $logger.debug("ReplSet Init Error: #{rse.message}")
+            if rse.message =~ /#{REPLSET_INIT_FAILED_ERR_MESS_REGEX}/
+              $logger.debug("Replica set previously initiated")
+            else
+              raise
+            end
           end
-          @replSet_initiated = true
+        end
       end
 
+      # TODO: Do we need this?
       def replSet_reconfig(config, force=false)
           begin
               @db.command({'replSetReconfig' => config, 'force' => force })
@@ -269,69 +229,27 @@ module MongoDB
           end
       end
 
-      def add_user(username, password, roles=['read'], db='admin')
-          @connection[db].add_user(username, password, nil, :roles => roles)
+      def create_user(client, username, password, roles=['read'], db='admin')
+        db_client = client.use(db)
+        result = db_client.database.users.create(
+          username,
+          password: password,
+          roles: roles
+        )
       end
 
-      def add_admin_user()
+      def create_admin_user
           admin_roles=[
               'readWriteAnyDatabase',
               'userAdminAnyDatabase',
               'dbAdminAnyDatabase',
               'clusterAdmin'
           ]
-          self.add_user(@admin_user, @admin_password, admin_roles)
-      end
-
-      def admin_user_exists()
-          @db['system.users'].find({'user'=> @admin_user}).any?
+          self.create_user(@client, @admin_user, @admin_password, admin_roles)
       end
 
       def logout
         @db.command(:logout => 1) if @db
-      end
-
-      # This method authenticates a database user.
-      # Determining the state of the authentication confguration on the target version
-      # of MongoDB (version 2.4) is not particularly simple and requires deliberate read
-      # exception handling. Added to that, the server behaves differently depending on whether
-      # the replica set has been initiated. If it hasn't been initiated then it's assumed here
-      # that authentication is not 'active'
-      def auth(username, password, db_name='admin')
-          @connection.remove_auth(db_name)
-          db = @connection[db_name]
-          begin
-              # Try and read the list of collections in the database (default is admin db)
-              db.collection_names
-              @auth_active = false
-          rescue Mongo::OperationFailure, Mongo::ConnectionFailure => coe
-              if  coe.message =~ /^not authorized for query/
-                  # Access has been denied so looks like authentication is active
-                  @auth_active = true
-              elsif coe.message =~ /^not master and slaveOk=false/
-                  # Looks like the replication set hasn't been configured yet so authentication
-                  # may or may not be active - assume inactive.
-                  @auth_active = false
-              else
-                  # Any other exception means there's some sort other issue but assume
-                  # authentication is active anyhow.
-                  @auth_active = true
-                  raise
-              end
-          end
-          # try authenticating the user. Even if authentication is not active this should still
-          # work so long as the user exists.
-          begin
-              db.authenticate(username, password, nil, db_name)
-          rescue Mongo::AuthenticationError => ae
-              # If authentication failed then either authentication is disabled and the user
-              # doesn't exist (in which case we don't care since authentication is disabled)
-              # or authentication has genuinely failed in which case we re-raise the exception
-              raise unless (
-                  not @auth_active and
-                  ae.message == "Failed to authenticate user '#{username}' on db '#{db_name}'."
-              )
-          end
       end
 
       # Method to get a failed member candidates to remove from the replica set
@@ -341,7 +259,7 @@ module MongoDB
           # all members are faulty *or* there is a network partition. Since it is not easy to
           # determine which is the case, it is only safe to remove members
           # if the replica set has been found
-              if not @replSet_found
+              if !replica_set?
                   raise Mongo::OperationFailure,
                       'MongoDB Replica Set could not be found.' +
                           ' No members will be removed from config.'
@@ -355,9 +273,7 @@ module MongoDB
       end
 
       # Method to add and possibly remove existing member 'non-healthy' members.
-      def add_or_replace_member(hostname, visibility=true, mongodb_port=DEFAULT_PORT)
-
-          host_key = "#{hostname}:#{mongodb_port}"
+      def add_or_replace_member(host_key, visibility=true)
 
           # Get the current replica set configuration
           replSetConfig = self.get_config()
@@ -411,107 +327,93 @@ module MongoDB
 
       end
 
-      def add_this_host(visibility=true, mongodb_port=DEFAULT_PORT)
+      def add_this_host(visibility=true)
           $logger.debug("Attempting to add #@this_host_ip to Replica Set...")
-          self.add_or_replace_member(@this_host_ip, visibility, mongodb_port)
+          self.add_or_replace_member(@this_host_key, visibility)
       end
 
-      def get_config
-          @connection['local']['system.replset'].find_one
-      end
+    def get_config
+      local_client = @client.use("local")
+      local_client["system.replset"].find().limit(1).first
+    end
 
-      def get_status
-          @db.command({"replSetGetStatus" => 1 })
-      end
+    def get_status
+      @client.database.command(:replSetGetStatus => 1).documents.first
+    end
 
-      def is_master
-          @db.command({"isMaster" => 1 })
+    def name
+      begin
+        get_config()["_id"]
+      rescue
+        nil
       end
+    end
 
-      def this_host_is_master(replSetName)
+    def replica_set?
+      !name.nil?
+    end
+
+    def replica_set_connection?
+      @client.cluster.topology.replica_set?
+    end
+
+    def member_names
+      get_status['members'].map{|m| m['name']}
+    end
+
+    def member?(host_key)
+      member_names.include?(host_key)
+    end
+
+    def authed?
+      @client.cluster.servers.first.pool.with_connection do |conn|
+        conn.authenticated?
+      end
+    end
+
+    # Method to connect to the configured replica
+    # Either a connection is made to the primary or a local connection is made
+    # (if only secondaries or local connections are available).
+    def connect
+      seed_list = config.seeds
+      if !seed_list.empty?
+      then
+        (1..REPLSET_CONNECT_ATTEMPTS).each do | find_attempts |
+          # Attempt to connect to the Replica Set using the seed list
+          # Assumption: if this succeeds then the replica set has already been initiated
+          # previously and the service can be located on the network
+          # (usually because the autoscaled member is simply adding itself back into the set)
+          $logger.debug("Connecting to MongoDB replica set (#{seed_list}).....")
           begin
-             is_masterDetails = self.is_master
-             is_masterDetails['ismaster'] and is_masterDetails['setName'] == replSetName
-          rescue
-              false
+            @client = replica_set_connect(seed_list, :primary_preferred)
+            $logger.debug('Connected to MongoDB replica set.....')
+            return @client
+          rescue => rsce
+            # Try a few more times before attempting to initiate the replica set
+            # to allow for e.g. temporary network partitions.
+            $logger.debug('Failed to connect to MongoDB replica set.....')
+            $logger.debug("#{rsce.message}")
+            # possible network glitches where the other members can't be reached.
+            if find_attempts < REPLSET_CONNECT_ATTEMPTS
+            then
+              $logger.debug("Sleeping for #{REPLSET_CONNECT_WAIT} seconds.....")
+              sleep(REPLSET_CONNECT_WAIT)
+              $logger.debug( "Trying again.")
+              $logger.debug( "Failed attempts #{find_attempts} "+
+                "of #{REPLSET_CONNECT_ATTEMPTS}.....")
+            else
+              $logger.debug('Replica Set can not be located on the network!!')
+            end
           end
+        end
       end
-
-      def is_replSet
-          begin
-              not self.get_config()["_id"].nil?
-          rescue
-              false
-          end
-      end
-
-      def is_this_replSet(replSetName=@replSet_name)
-          begin
-              self.get_config()["_id"] == replSetName
-          rescue
-              false
-          end
-      end
-
-      def is_replSet_member(host_key)
-          begin
-             self.get_status()['members'].select { |m| m['name'] ==  host_key }.any?
-          rescue
-             false
-          end
-      end
-
-      def this_host_is_replSet_member()
-          self.is_replSet_member @this_host_key
-      end
-
-      # Method to 'find' the replica set service on the netork from a given host seed list
-      # Either a connection is made to the primary or a local connection is made (if only
-      # secondaries or local connections are available).
-      def find_replSet_service(mongodb_host_seed_list)
-
-          @replSet_found = false
-          if mongodb_host_seed_list.any?
-          then
-              (1..REPLSET_CONNECT_ATTEMPTS).each do | find_attempts |
-                  # Attempt to connect to the Replica Set using the seed list
-                  # Assumption: if this succeeds then the replica set has already been initiated
-                  # previously and the service can be located on the network
-                  # (usually because the autoscaled member is simply adding itself back into the set)
-                  $logger.debug("Connecting to MongoDB replica set (#{mongodb_host_seed_list}).....")
-                  begin
-                      self.replSet_connect(mongodb_host_seed_list, :primary_preferred)
-                      $logger.debug('Connected to MongoDB replica set.....')
-                      @replSet_found = true
-                      break
-                  rescue => rsce
-                      # Try a few more times before attempting to initiate the replica set
-                      # to allow for e.g. temporary network partitions.
-                      $logger.debug('Failed to connect to MongoDB replica set.....')
-                      $logger.debug("#{rsce.message}")
-                      # possible network glitches where the other members can't be reached.
-                      if find_attempts < REPLSET_CONNECT_ATTEMPTS
-                      then
-                         $logger.debug("Sleeping for #{REPLSET_CONNECT_WAIT} seconds.....")
-                         sleep(REPLSET_CONNECT_WAIT)
-                         $logger.debug( "Trying again.")
-                         $logger.debug( "Failed attempts #{find_attempts} "+
-                             "of #{REPLSET_CONNECT_ATTEMPTS}.....")
-                      else
-                         $logger.debug('Replica Set can not be located on the network!!')
-                      end
-                  end
-              end
-          end
-          # if can't connect to the replica set then connect locally
-          if not @replSet_found
-          then
-              $logger.debug "Can't connect to the Replica Set"
-              $logger.debug 'Attempting to Connect to Mongodb locally...'
-              self.local_connect()
-              $logger.debug('Connected locally because Replica Set could not be found.....')
-          end
-      end
+      # if can't connect to the replica set then connect locally
+      $logger.debug "Can't connect to the Replica Set"
+      $logger.debug 'Attempting to Connect to Mongodb locally...'
+      @client = local_connect()
+      $logger.debug('Connected locally because Replica Set could not be found.....')
+      return @client
+    end
 
       private :wait_member_state, :get_members_to_remove
 

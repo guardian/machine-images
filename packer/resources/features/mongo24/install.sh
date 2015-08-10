@@ -1,4 +1,6 @@
 #!/bin/bash
+set -e
+
 # Install MongoDB 2.4
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
@@ -12,6 +14,7 @@ cp ${SCRIPTPATH}/mongodb.service /etc/systemd/system/mongodb.service
 
 systemctl start mongodb
 
+# TODO: replace with bundler
 echo "Installing Ruby gems for helper scripts"
 gem install aws-sdk -v '~> 2'
 gem install mongo -v '~> 2'

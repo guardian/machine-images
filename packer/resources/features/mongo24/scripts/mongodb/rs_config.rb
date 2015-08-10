@@ -79,8 +79,8 @@ module MongoDB
       else
         begin
           # this is a new replica set config, so
-          admin_password = SecureRandom.base64
-          key = SecureRandom.base64(700)
+          admin_password = securerandom64(16)
+          key = securerandom64(700)
           dynamo.put_item(
             :table_name => @table_name,
             :item => {
@@ -132,6 +132,12 @@ module MongoDB
 
     def dynamo
       @db ||= Aws::DynamoDB::Client.new
+    end
+
+    def securerandom64(length)
+      # This ensures that the value returned never has any '=' symbols
+      # (valid base64, but not valid in a keyFile)
+      SecureRandom.base64(length+3)[0..length-1]
     end
 
   end

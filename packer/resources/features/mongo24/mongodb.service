@@ -9,7 +9,7 @@ Environment="OPTIONS=-f /etc/mongodb.conf"
 ExecStartPre=/bin/mkdir -p /var/log/mongodb
 ExecStartPre=/bin/mkdir -p /var/lib/mongodb
 ExecStart=/usr/bin/mongod $OPTIONS run
-PIDFile=/var/run/mongodb/mongod.pid
+PIDFile=/var/run/mongodb/mongodb.pid
 
 [Install]
 WantedBy=multi-user.target

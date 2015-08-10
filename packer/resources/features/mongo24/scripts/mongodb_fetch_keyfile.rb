@@ -18,5 +18,5 @@ replica_set_config = MongoDB::ReplicaSetConfig.new
 
 locksmith.lock(replica_set_config.name) do
   security_data = replica_set_config.security_data
-  File.write('/var/lib/mongodb/keyFile', security_data[:key])
+  puts security_data[:key]
 end
