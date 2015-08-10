@@ -60,7 +60,7 @@ module MongoDB
   REPLSET_CONNECT_ATTEMPTS = 60
 
   # Maximum attempts to add this host to the replica set before giving up.
-  REPLSET_RECONFIG_MAX_ATTEMPTS = 1
+  REPLSET_RECONFIG_MAX_ATTEMPTS = 50
   # TODO REPLSET_RECONFIG_MAX_ATTEMPTS = 240
 
 
@@ -68,8 +68,7 @@ module MongoDB
   class ReplicaSet
 
     attr_accessor :this_host_added
-    attr_reader :this_host_key, :name,
-                :replSet_primary_found, :init_config, :config
+    attr_reader :this_host_key, :name, :config
 
     def initialize(config)
       @config = config
@@ -77,22 +76,11 @@ module MongoDB
       @this_host_key = "#{this_host_ip}:#{DEFAULT_PORT}"
 
       @client
-      @connected_host
-      @connected_port
-      @connected_host_key
-      @primary
-      @secondaries
-      @replSet_primary_found = false
-      @this_host_added = false
 
       @name = config.name
       rs_security = config.security_data
       @admin_user = rs_security[:admin_user]
       @admin_password = rs_security[:admin_password]
-      @init_config = {
-        "_id" => @name,
-        'members' => [{ '_id' => 0, 'host' => @this_host_key }]
-      }
     end
 
     # Direct local connect on the current host
@@ -186,7 +174,11 @@ module MongoDB
       # Initiate the Replica Set - this is an asynchronous process so if the
       # async parameter is false this method will wait until the initiation is complete
       def initiate(async=true)
-        @client.database.command(:replSetInitiate => @init_config)
+        init_config = {
+          "_id" => @name,
+          'members' => [{ '_id' => 0, 'host' => @this_host_key }]
+        }
+        @client.database.command(:replSetInitiate => init_config)
 
         if not async
         then
@@ -279,8 +271,6 @@ module MongoDB
 
           # Get the current replica set configuration
           replSetConfig = self.get_config()
-
-          replSetConfig = @init_config if not replSetConfig
 
           # we need to increment the config version when updating it
           replSetConfig['version'] += 1 if replSetConfig['version']
