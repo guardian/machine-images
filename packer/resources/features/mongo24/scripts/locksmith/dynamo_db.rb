@@ -74,7 +74,7 @@ module Locksmith
         :key => { :LockName => name },
         :update_expression => 'SET Locked = :new_rev',
         :condition_expression => 'Locked = :rev',
-        :expression_attribute_values => { :rev => rev, :new_rev => new_rev }
+        :expression_attribute_values => { ':rev' => rev, ':new_rev' => new_rev }
       )
     end
 

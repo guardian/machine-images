@@ -62,7 +62,7 @@ module MongoDB
         :key => { :ReplicaSetName => @name },
         :update_expression => 'SET SeedList = :new_list',
         :condition_expression => 'SeedList = :old_list',
-        :expression_attribute_values => { :old_list => old_list, :new_list => new_list }
+        :expression_attribute_values => { ':old_list' => old_list, ':new_list' => new_list }
       )
     end
 
