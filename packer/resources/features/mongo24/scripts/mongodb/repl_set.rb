@@ -20,7 +20,7 @@ module MongoDB
   # Number of attempts, and wait in seconds for each attempt, for MongoDB replica set member to
   # complete a reconfiguration (i.e. following a 'replSetReconfig' command).
   RECONFIG_WAIT = 3
-  RECONFIG_ATTEMPTS = 60
+  RECONFIG_ATTEMPTS = 5
 
   # MongoDB replic set member states that are considered to be a 'non-failed' state
   NON_FAILED_STATES = [0, 1, 2, 3, 5, 6, 7, 9]
@@ -188,20 +188,17 @@ module MongoDB
       end
     end
 
-    # TODO: Do we need this?
     def replica_set_reconfig(config, force=false)
       begin
-        @db.command({:replSetReconfig => config, :force => force})
-      rescue Mongo::Error::OperationTimeout
+        @client.database.command(:replSetReconfig => config, :force => force)
+      rescue Mongo::Error::OperationFailure => error
         raise unless force
         reconfig_attempts = 0
-        begin
-          get_status
-        rescue => se
-          $logger.debug('Reconfig Status error:')
-          $logger.debug("#{se.message}")
-          retry unless (reconfig_attempts += 1) >= RECONFIG_ATTEMPTS
-          raise
+        $logger.debug('Reconfig Status error:')
+        $logger.debug("#{error.message}")
+        unless (reconfig_attempts += 1) >= RECONFIG_ATTEMPTS
+          sleep(RECONFIG_WAIT)
+          retry
         end
       end
     end
