@@ -242,6 +242,8 @@ locksmith.lock(replica_set_config.name) do
     $logger.info("FAILED: #{ce.message}")
     $logger.info("EXITING...")
     raise
+  ensure
+    replica_set.disconnect!
   end
 end
 

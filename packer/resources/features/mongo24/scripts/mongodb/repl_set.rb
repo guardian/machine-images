@@ -336,12 +336,21 @@ module MongoDB
       end
     end
 
+    def disconnect!
+      # TODO - when mongo 2.1.0 is released this can be refactored
+      unless @client.nil?
+        $logger.debug("Disconnecting from MongoDB.....")
+        @client.cluster.servers.each{ |s| s.disconnect! }
+        @client = nil
+      end
+    end
+
     # Method to connect to the configured replica
     # Either a connection is made to the primary or a local connection is made
     # (if only secondaries or local connections are available).
     def connect
-      # TODO - when 2.1.0 is released:
-      # @client.close unless @client.nil?
+      # if we are reconnecting, let's purge any existing connection
+      disconnect!
 
       seed_list = config.seeds
       unless seed_list.empty?
@@ -355,7 +364,7 @@ module MongoDB
           begin
             @client = replica_set_connect(seed_list, :primary_preferred)
             $logger.debug('Connected to MongoDB replica set.....')
-            @client
+            return @client
           rescue => rsce
             # Try a few more times before attempting to initiate the replica set
             # to allow for e.g. temporary network partitions.
