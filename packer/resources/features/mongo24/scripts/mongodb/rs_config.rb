@@ -92,9 +92,9 @@ module MongoDB
             },
             :expected => { :SeedListName => { :comparison_operator => 'NULL'} }
           )
-          puts 'added default record'
+          STDERR.puts 'added default record'
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          puts 'record exists'
+          STDERR.puts 'record exists'
         end
         fetch_replica_data
       end
