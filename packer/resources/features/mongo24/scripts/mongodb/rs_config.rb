@@ -31,9 +31,9 @@ module MongoDB
 
     def security_data
       rs_data = fetch_replica_data
-      { key: rs_data['Key'],
-        admin_user: rs_data['AdminUser'],
-        admin_password: rs_data['AdminPassword'] }
+      { :key => rs_data['Key'],
+        :admin_user => rs_data['AdminUser'],
+        :admin_password => rs_data['AdminPassword'] }
     end
 
     def add_seed(obj)
@@ -60,9 +60,9 @@ module MongoDB
       dynamo.update_item(
         :table_name => @table_name,
         :key => { :ReplicaSetName => @name },
-        :update_expression => "SET SeedList = :new_list",
-        :condition_expression => "SeedList = :old_list",
-        :expression_attribute_values => { ":old_list" => old_list, ":new_list" => new_list }
+        :update_expression => 'SET SeedList = :new_list',
+        :condition_expression => 'SeedList = :old_list',
+        :expression_attribute_values => { :old_list => old_list, :new_list => new_list }
       )
     end
 
@@ -70,7 +70,7 @@ module MongoDB
       replica_set_record = dynamo.get_item(
         :table_name => @table_name,
         :key => { :ReplicaSetName => @name },
-        :consistent_read => true,
+        :consistent_read => true
       ).data.item
 
       if !replica_set_record.nil?
@@ -79,22 +79,22 @@ module MongoDB
       else
         begin
           # this is a new replica set config, so
-          admin_password = securerandom64(16)
-          key = securerandom64(700)
+          admin_password = secure_random_64(16)
+          key = secure_random_64(700)
           dynamo.put_item(
             :table_name => @table_name,
             :item => {
-              ReplicaSetName: @name,
-              SeedList: [],
-              AdminUser: "aws-admin",
-              AdminPassword: admin_password,
-              Key: key
+              :ReplicaSetName => @name,
+              :SeedList => [],
+              :AdminUser => 'aws-admin',
+              :AdminPassword => admin_password,
+              :Key => key
             },
-            :expected => { "SeedListName" => { comparison_operator: "NULL" } }
+            :expected => { :SeedListName => { :comparison_operator => 'NULL'} }
           )
-          puts "added default record"
+          puts 'added default record'
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          puts "record exists"
+          puts 'record exists'
         end
         fetch_replica_data
       end
@@ -126,7 +126,7 @@ module MongoDB
         )
 
         # wait for table to be created
-        dynamo.wait_until(:table_exists, table_name: @table_name)
+        dynamo.wait_until(:table_exists, :table_name => @table_name)
       end
     end
 
@@ -134,7 +134,7 @@ module MongoDB
       @db ||= Aws::DynamoDB::Client.new
     end
 
-    def securerandom64(length)
+    def secure_random_64(length)
       # This ensures that the value returned never has any '=' symbols
       # (valid base64, but not valid in a keyFile)
       SecureRandom.base64(length+3)[0..length-1]

@@ -17,7 +17,7 @@ require 'syslog'
 require 'optparse'
 require 'ostruct'
 require 'shellwords'
-require_relative 'locksmith/dynamodb'
+require_relative 'locksmith/dynamo_db'
 require_relative 'mongodb/repl_set'
 require_relative 'mongodb/rs_config'
 require_relative 'aws/helpers'
@@ -34,13 +34,11 @@ end
 # in a particular AZ.
 # The string must be a distinct combination of letters (which should indicate AZs)
 # An empty string represents 'not visible in all AZs'
-def string_to_visibility_mask(visibility_mask_string = 'abc')
-    visibility_mask_hash = Hash[visibility_mask_string.chars.map { |c| [c, true] }]
-    visibility_mask_hash.default = false
-    visibility_mask_hash
+def string_to_visibility_mask(visibility_mask_str = 'abc')
+  visibility_mask_hash = Hash[visibility_mask_str.chars.map { |c| [c, true] }]
+  visibility_mask_hash.default = false
+  visibility_mask_hash
 end
-
-instance_tags = nil
 
 def get_tag(tag_name)
   instance_tags ||= AwsHelper::InstanceData::get_tags
@@ -48,65 +46,67 @@ def get_tag(tag_name)
 end
 
 def parse_options(args)
-    # The options specified on the command line will be collected in *options*.
-    # Set default values here.
-    options = OpenStruct.new
-    begin
-        opts = OptionParser.new do |opts|
+  # The options specified on the command line will be collected in *options*.
+  # Set default values here.
+  options = OpenStruct.new
+  begin
+    opts = OptionParser.new do |opts|
 
-            opts.banner = "\nUsage: #{$0} [options]"
+      opts.banner = "\nUsage: #{$0} [options]"
 
-            opts.separator ""
-            opts.separator "Specific options:"
+      opts.separator ''
+      opts.separator 'Specific options:'
 
-            opts.on("-Z", "--zone_visibility_mask 'abc'",
-            "AZ secondary member visibility mask (combination of a+b+c)") do |v|
-                options.visibility_mask = string_to_visibility_mask(v)
-            end
-            opts.on("-D", "--debug", "Run in debug mode") do
-                options.debug_mode = true
-            end
+      opts.on('-Z', "--zone_visibility_mask 'abc'",
+              'AZ secondary member visibility mask (combination of a+b+c)') do |v|
+        options.visibility_mask = string_to_visibility_mask(v)
+      end
+      opts.on('-D', '--debug', 'Run in debug mode') do
+        options.debug_mode = true
+      end
 
-            opts.on_tail("-h", "--help", "Show this message") do
-                raise
-            end
+      opts.on_tail('-h', '--help', 'Show this message') do
+        raise
+      end
 
-        end
-
-        opts.parse!(args)
-
-        raise "Non-empty list of arguments **(#{args})**" if !args.empty?
-
-        options.debug_mode = options.debug_mode || false
-        options.visibility_mask ||= string_to_visibility_mask("abc")
-
-    rescue => e
-        puts "\nOptions Error: #{e.message}" unless e.message.empty?
-        puts opts
-        puts
-        exit
     end
 
-    options
+    opts.parse!(args)
 
-end  # parse_options()
+    raise "Non-empty list of arguments **(#{args})**" unless args.empty?
+
+    options.debug_mode ||= false
+    options.visibility_mask ||= string_to_visibility_mask('abc')
+
+  rescue => e
+    puts "\nOptions Error: #{e.message}" unless e.message.empty?
+    puts opts
+    puts
+    exit
+  end
+
+  options
+
+end
+
+# parse_options()
 
 def setup_logger(debug_mode=false)
-    ## Set up the sys logger.
-    #  If debug_mode is true, then we log to both STDERR and syslog.
-    #  Otherwise we only log to syslog.
-    logopt = Syslog::LOG_PID | Syslog::LOG_NDELAY
+  ## Set up the sys logger.
+  #  If debug_mode is true, then we log to both STDERR and syslog.
+  #  Otherwise we only log to syslog.
+  logopt = Syslog::LOG_PID | Syslog::LOG_NDELAY
 
-    if ! debug_mode
-        logmask = Syslog::LOG_INFO
-    else
-        logopt = logopt | Syslog::LOG_PERROR
-        logmask = Syslog::LOG_DEBUG
-    end
+  if !debug_mode
+    logmask = Syslog::LOG_INFO
+  else
+    logopt = logopt | Syslog::LOG_PERROR
+    logmask = Syslog::LOG_DEBUG
+  end
 
-    logger = Syslog.open(ident = $0, logopt = logopt, facility = SYS_LOG_FACILITY)
-    logger.mask = Syslog::LOG_UPTO(logmask)
-    return logger
+  logger = Syslog.open(ident = $0, logopt = logopt, facility = SYS_LOG_FACILITY)
+  logger.mask = Syslog::LOG_UPTO(logmask)
+  logger
 end
 
 # Method to initiate the replica set
@@ -156,14 +156,12 @@ replica_set_config = MongoDB::ReplicaSetConfig.new
 # Set up MongoDB replica set object
 replica_set = MongoDB::ReplicaSet.new(replica_set_config)
 
-locksmith = Locksmith::Dynamodb.new(
-  lock_table_name = "mongo-initialisation",
-  max_attempts = 240,
-  lock_retry_time = 10,
-  ttl = 3600
+locksmith = Locksmith::DynamoDB.new(
+    lock_table_name = 'mongo-initialisation',
+    max_attempts = 240,
+    lock_retry_time = 10,
+    ttl = 3600
 )
-
-lock_attempts = 0
 
 # first of all, check that authentication has been set up on the local
 # instance
@@ -186,11 +184,11 @@ locksmith.lock(replica_set_config.name) do
       $logger.debug('Replica Set inititated')
 
       # Add Admin User account if not already added.
-      if !replica_set.authed?
+      unless replica_set.authed?
       then
         $logger.debug('Adding admin user....')
         begin
-          replica_set.create_admin_user()
+          replica_set.create_admin_user
           $logger.debug('Admin user added.')
         rescue => e
           $logger.debug('Failed to add admin user.')
@@ -201,8 +199,9 @@ locksmith.lock(replica_set_config.name) do
     else
       ## If this member hasn't been added (in case when replica set had already
       #  been inititated) then add it now
-      replica_set.add_this_host(options.visibility_mask[availability_zone]) \
-          unless replica_set.member?(replica_set.this_host_key)
+      unless replica_set.member?(replica_set.this_host_key)
+        replica_set.add_this_host(options.visibility_mask[availability_zone])
+      end
     end
 
     # Add the member to the seed list.
@@ -212,10 +211,10 @@ locksmith.lock(replica_set_config.name) do
     # By now it should be possible to connect directly to the replica set
     # This serves as an assertion that the member has been added successfully
     replica_set.connect
-    raise FatalError, 'Could not connect to newly configured Replica Set' \
-        unless replica_set.replica_set?
+    raise FatalError, 'Could not connect to newly configured Replica Set' unless replica_set.replica_set?
 
-    # Delete any members in the seed list which are no longer in the replica set config
+    # If we are connected to the replica set, delete any members in the seed list
+    # which are no longer in the replica set config
     if replica_set.replica_set_connection?
       all_members = replica_set.member_names
       ghost_members = replica_set_config.seeds.reject { |m| all_members.include?(m) }
@@ -223,29 +222,27 @@ locksmith.lock(replica_set_config.name) do
         $logger.debug("Removing #{g} from seed list")
         replica_set_config.remove_seed(g)
       }
-    }
-
-    # Attempt to reconfigure the replica set again for a few times unless a fatal error occurs
-    rescue FatalError => fe
-      $logger.debug("FATAL Error. Cannot continue:")
-      $logger.debug("#{fe.message}")
-      raise
-    rescue => ce
-      if (rs_add_attempts += 1) < MongoDB::REPLSET_RECONFIG_MAX_ATTEMPTS
-      then
-        $logger.debug('Failed to add MongoDB Replica Set Member.....'+
-            "(attempt = #{rs_add_attempts})")
-        $logger.debug("#{ce.message}")
-        $logger.debug("Sleeping for #{MongoDB::REPLSET_CONNECT_WAIT} seconds.....")
-        sleep(MongoDB::REPLSET_CONNECT_WAIT)
-        retry
-      end
-      $logger.info("FAILED: #{ce.message}")
-      $logger.info("EXITING...")
-      raise
     end
+
+  rescue FatalError => fe
+    $logger.debug('FATAL Error. Cannot continue:')
+    $logger.debug("#{fe.message}")
+    raise
+  rescue => ce
+    # Attempt to reconfigure the replica set again for a few times unless a fatal error occurs
+    if (rs_add_attempts += 1) < MongoDB::RECONFIG_MAX_ATTEMPTS
+    then
+      $logger.debug('Failed to add MongoDB Replica Set Member.....'+
+                        "(attempt = #{rs_add_attempts})")
+      $logger.debug("#{ce.message}")
+      $logger.debug("Sleeping for #{MongoDB::CONNECT_WAIT} seconds.....")
+      sleep(MongoDB::CONNECT_WAIT)
+      retry
+    end
+    $logger.info("FAILED: #{ce.message}")
+    $logger.info("EXITING...")
+    raise
+  end
 end
 
 $logger.info('MongoDB Add Replica Set Member COMPLETE!')
-
-exit

@@ -5,7 +5,7 @@ require 'thread'
 require_relative './log'
 
 module Locksmith
-  class Dynamodb
+  class DynamoDB
     TTL = 120
     MAX_LOCK_ATTEMPTS = 20
     LOCK_TIMEOUT = 120
@@ -29,24 +29,24 @@ module Locksmith
       attempts = 0
       while attempts < @max_attempts
         lock = fetch_lock(name)
-        last_rev = lock["Locked"] || 0
+        last_rev = lock['Locked'] || 0
         new_rev = Time.now.to_i
-        log(at: "attempting", lock: name, lock: lock, rev: new_rev, attempt: attempts)
+        log(:at => 'attempting', :lock => name, :rev => new_rev, :attempt => attempts)
         begin
           Timeout::timeout(@lock_timeout) do
             release_lock(name, last_rev) if last_rev < (Time.now.to_i - @ttl)
             write_lock(name, 0, new_rev)
-            log(at: "lock-acquired", lock: name, rev: new_rev)
+            log(:at => 'lock-acquired', :lock => name, :rev => new_rev)
             begin
               result = yield
             ensure
               release_lock(name, new_rev)
-              log(at: "lock-released", lock: name, rev: new_rev)
+              log(:at => 'lock-released', :lock => name, :rev => new_rev)
             end
             return result
           end
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          log(at: "conditional_failed", lock: name)
+          log(:at => 'conditional_failed', :lock => name)
           attempts += 1
         rescue Timeout::Error
           attempts += 1
@@ -54,7 +54,7 @@ module Locksmith
             release_lock(name, new_rev)
           rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
           end
-          log(at: "timeout-lock-released", lock: name, rev: new_rev)
+          log(:at => 'timeout-lock-released', :lock => name, :rev => new_rev)
         end
         sleep(@lock_retry_time)
       end
@@ -71,10 +71,10 @@ module Locksmith
     def update_lock_record(name, rev, new_rev)
       dynamo.update_item(
         :table_name => @lock_table_name,
-        :key => { LockName: name },
-        :update_expression => "SET Locked = :new_rev",
-        :condition_expression => "Locked = :rev",
-        :expression_attribute_values => { ":rev" => rev, ":new_rev" => new_rev }
+        :key => { :LockName => name },
+        :update_expression => 'SET Locked = :new_rev',
+        :condition_expression => 'Locked = :rev',
+        :expression_attribute_values => { :rev => rev, :new_rev => new_rev }
       )
     end
 
@@ -82,7 +82,7 @@ module Locksmith
       lock_record = dynamo.get_item(
         :table_name => @lock_table_name,
         :key => { :LockName => name },
-        :consistent_read => true,
+        :consistent_read => true
       ).data.item
 
       if !lock_record.nil?
@@ -92,12 +92,12 @@ module Locksmith
         begin
           dynamo.put_item(
             :table_name => @lock_table_name,
-            :item => { LockName: name, Locked: 0 },
-            :expected => { "LockName" => { comparison_operator: "NULL" } }
+            :item => { :LockName => name, :Locked => 0 },
+            :expected => { :LockName => { :comparison_operator => 'NULL'} }
           )
-          log(at: "added_default_record", table: @lock_table_name, name: name)
+          log(:at => 'added_default_record', :table => @lock_table_name, :name => name)
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          log(at: "record_exists", table: @lock_table_name, name: name)
+          log(:at => 'record_exists', :table => @lock_table_name, :name => name)
         end
         fetch_lock(name)
       end
@@ -129,9 +129,9 @@ module Locksmith
         )
 
         # wait for table to be created
-        log(at: "ensure_table_exists", table: @lock_table_name, status: "waiting")
-        dynamo.wait_until(:table_exists, table_name: @lock_table_name)
-        log(at: "ensure_table_exists", table: @lock_table_name, status: "created")
+        log(:at => 'ensure_table_exists', :table => @lock_table_name, :status => "waiting")
+        dynamo.wait_until(:table_exists, :table_name => @lock_table_name)
+        log(:at => 'ensure_table_exists', :table => @lock_table_name, :status => "created")
       end
     end
 
@@ -142,7 +142,7 @@ module Locksmith
     end
 
     def log(data, &blk)
-      Log.log({ns: "dynamo-lock"}.merge(data), &blk)
+      Log.log({:ns => 'dynamo-lock'}.merge(data), &blk)
     end
 
   end

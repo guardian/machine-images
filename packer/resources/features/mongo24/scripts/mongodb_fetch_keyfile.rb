@@ -1,13 +1,13 @@
 #!/usr/bin/env ruby
 require 'aws-sdk'
-require_relative 'locksmith/dynamodb'
+require_relative 'locksmith/dynamo_db'
 require_relative 'mongodb/rs_config'
 require_relative 'aws/helpers'
 
 Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
 Aws.config[:region] = AwsHelper::Metadata::region
 
-locksmith = Locksmith::Dynamodb.new(
+locksmith = Locksmith::DynamoDB.new(
   lock_table_name = "mongo-initialisation",
   max_attempts = 240,
   lock_retry_time = 10,
