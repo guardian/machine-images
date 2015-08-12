@@ -52,7 +52,7 @@ cp $FEATURE_ROOT/elasticsearch.yml /etc/elasticsearch/elasticsearch.yml.template
 
 ## Install logstash config
 cp $FEATURE_ROOT/elasticsearch-template.json /etc/logstash/elasticsearch-template.json
-cp $FEATURE_ROOT/logstash-indexer.conf /etc/logstash/conf.d/logstash-indexer.conf
+cp $FEATURE_ROOT/logstash-indexer.conf.template /etc/logstash/conf.d/logstash-indexer.conf.template
 
 ## Install logstash plugins
 su - logstash -s /bin/sh -c '/opt/logstash/bin/plugin install logstash-input-kinesis'
