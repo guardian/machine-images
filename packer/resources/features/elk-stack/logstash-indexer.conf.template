@@ -7,6 +7,7 @@ input {
     kinesis {
         kinesis_stream_name => "@@KINESIS_STREAM_NAME"
         application_name => "@@KCL_TABLE_NAME"
+        region => "@@REGION"
         codec => json { }
     }
 }

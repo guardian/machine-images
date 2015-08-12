@@ -350,7 +350,10 @@
                             { "Fn::Join": [ "", [ "sed",
                                 " -e 's,@@KINESIS_STREAM_NAME,", { "Ref": "KinesisStream" }, ",g'",
                                 " -e 's,@@KCL_TABLE_NAME,", { "Ref": "KCLDynamoDBTable" }, ",g'",
+                                " -e 's,@@REGION,", { "Ref": "AWS::Region" }, ",g'",
                                 " /etc/logstash/conf.d/logstash-indexer.conf.template > /etc/logstash/conf.d/logstash-indexer.conf" ] ] },
+
+                            "rm /etc/logstash/conf.d/logstash-indexer.conf.template",
 
                             { "Fn::Join": [ "", [ "sed",
                                 " -i -E \"s,(#)?ES_HEAP_SIZE=.*,ES_HEAP_SIZE=$((",
