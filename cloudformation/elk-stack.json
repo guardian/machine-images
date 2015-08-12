@@ -116,7 +116,7 @@
 
     "Resources": {
 
-        "MediaServiceKinesisReaderRole": {
+        "MediaServiceKinesisSenderRole": {
             "Type": "AWS::IAM::Role",
             "Properties": {
                 "Path": "/",
@@ -131,6 +131,28 @@
                         }
                     ]
                 }
+            }
+        },
+
+        "KinesisSenderPolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "kinesis-sender",
+                "PolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "kinesis:PutRecord"
+                            ],
+                            "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
+                        }
+                    ]
+                },
+                "Roles": [ {
+                    "Ref": "MediaServiceKinesisSenderRole"
+                } ]
             }
         },
 
@@ -167,7 +189,7 @@
                     ]
                 },
                 "Roles": [ {
-                    "Ref": "MediaServiceKinesisReaderRole"
+                    "Ref": "Role"
                 } ]
             }
         },
