@@ -95,9 +95,9 @@ module Locksmith
             :item => { :LockName => name, :Locked => 0 },
             :expected => { :LockName => { :comparison_operator => 'NULL'} }
           )
-          log(:at => 'added_default_record', :table => @lock_table_name, :name => name)
+          log(:at => 'added_default_record', :table => @lock_table_name, :@key => name)
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          log(:at => 'record_exists', :table => @lock_table_name, :name => name)
+          log(:at => 'record_exists', :table => @lock_table_name, :@key => name)
         end
         fetch_lock(name)
       end

@@ -12,17 +12,21 @@ require_relative '../aws/helpers'
 module MongoDB
   class ReplicaSetConfig
 
-    attr_reader :name
+    attr_reader :key
 
-    def build_replica_set_name
+    def build_replica_set_key
       tags = AwsHelper::InstanceData::get_tags
       [tags['Stack'], tags['App'], tags['Stage']].join('-')
     end
 
-    def initialize(table_name=nil, name=nil)
-      @name = name || build_replica_set_name
-      @table_name = table_name || "mongo.rsconfig.#{@name}"
+    def initialize(table_name=nil, key=nil)
+      @key = key || build_replica_set_key
+      @table_name = table_name || "mongo.rsconfig.#{@key}"
       ensure_table_exists
+    end
+
+    def name
+      @name ||= fetch_replica_data['ReplicaSetName']
     end
 
     def seeds
@@ -59,7 +63,7 @@ module MongoDB
     def update_seed_list(old_list, new_list)
       dynamo.update_item(
         :table_name => @table_name,
-        :key => { :ReplicaSetName => @name },
+        :key => { :ReplicaSetKey => @key },
         :update_expression => 'SET SeedList = :new_list',
         :condition_expression => 'SeedList = :old_list',
         :expression_attribute_values => { ':old_list' => old_list, ':new_list' => new_list }
@@ -69,7 +73,7 @@ module MongoDB
     def fetch_replica_data
       replica_set_record = dynamo.get_item(
         :table_name => @table_name,
-        :key => { :ReplicaSetName => @name },
+        :key => { :ReplicaSetKey => @key },
         :consistent_read => true
       ).data.item
 
@@ -84,7 +88,8 @@ module MongoDB
           dynamo.put_item(
             :table_name => @table_name,
             :item => {
-              :ReplicaSetName => @name,
+              :ReplicaSetKey => @key,
+              :ReplicaSetName => @key,
               :SeedList => [],
               :AdminUser => 'aws-admin',
               :AdminPassword => admin_password,
@@ -109,13 +114,13 @@ module MongoDB
           :table_name => @table_name,
           :attribute_definitions => [
             {
-              :attribute_name => :ReplicaSetName,
+              :attribute_name => :ReplicaSetKey,
               :attribute_type => :S
             }
           ],
           :key_schema => [
             {
-              :attribute_name => :ReplicaSetName,
+              :attribute_name => :ReplicaSetKey,
               :key_type => :HASH
             }
           ],

@@ -33,7 +33,7 @@ if replset.nil?
   this_host_ip = IPSocket.getaddress(Socket.gethostname)
 
   init_config = {
-      :_id => config.name,
+      :_id => config.key,
       :members => [{ :_id => 0, :host => "#{this_host_ip}:27017" }]
   }
 

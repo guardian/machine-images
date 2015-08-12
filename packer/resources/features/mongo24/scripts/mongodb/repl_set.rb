@@ -61,7 +61,7 @@ module MongoDB
 
       @client
 
-      @name = config.name
+      @key = config.key
       rs_security = config.security_data
       @admin_user = rs_security[:admin_user]
       @admin_password = rs_security[:admin_password]
@@ -118,7 +118,7 @@ module MongoDB
           :password => @admin_password,
           :connect_timeout => CONNECT_WAIT,
           :read => {:mode => read_pref},
-          :replica_set => @config.name,
+          :replica_set => @config.key,
           :connect => :replica_set
       )
     end
@@ -159,7 +159,7 @@ module MongoDB
     # async parameter is false this method will wait until the initiation is complete
     def initiate(async=true)
       init_config = {
-          :_id => @name,
+          :_id => @key,
           :members => [{:_id => 0, :host => @this_host_key}]
       }
       @client.database.command(:replSetInitiate => init_config)

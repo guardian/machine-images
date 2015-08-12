@@ -12,7 +12,7 @@ logpath = /var/log/mongodb/mongodb.log
 logappend = true
 
 # Replica set configuration
-replSet = <%= ENV['STACK'] %>-<%= ENV['APP'] %>-<%= ENV['STAGE'] %>
+replSet = <%= @replica_set_name %>
 
 # Authentication
 auth = true

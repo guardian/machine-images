@@ -115,7 +115,7 @@ def initiate(replica_set)
   config = replica_set.config
 
   if replica_set.replica_set?
-    if replica_set.name != config.name
+    if replica_set.key != config.key
       raise FatalError, 'Member already belongs to a different Replica Set?!'
     else
       $logger.debug 'Mongodb Replica set already inititated...'
@@ -167,7 +167,7 @@ locksmith = Locksmith::DynamoDB.new(
 # instance
 
 
-locksmith.lock(replica_set_config.name) do
+locksmith.lock(replica_set_config.key) do
   # lock taken using the replica set name
   rs_add_attempts = 0
   begin
