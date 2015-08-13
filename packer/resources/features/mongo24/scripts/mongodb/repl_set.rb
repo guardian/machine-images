@@ -50,6 +50,7 @@ module MongoDB
 
   # Class to encapsulate complexities and detail of accessing a MongoDB Replica Set
   class ReplicaSet
+    include Util::LoggerMixin
 
     attr_accessor :this_host_added
     attr_reader :this_host_key, :name, :config
@@ -93,10 +94,10 @@ module MongoDB
     def local_connect
       client = local_connect_auth
       if has_admin?(client)
-        $logger.debug("Connected locally with auth")
+        logger.info("Connected locally with auth")
         client
       else
-        $logger.debug("Connected locally using auth bypass")
+        logger.info("Connected locally using auth bypass")
         local_connect_bypass
       end
     end
@@ -138,15 +139,15 @@ module MongoDB
         rescue
           state = STATES.invert['UNKNOWN']
         end
-        $logger.debug("ReplSet Initiation Member State: #{STATES[state]}")
+        logger.info("ReplSet Initiation Member State: #{STATES[state]}")
 
         return if expected_states.include? STATES[state]
 
         unless NON_FAILED_STATES.include? state
           # an invalid state - raise an exception
           "#{INVALID_STATE_ERR_MESS} (State=>#{STATES[state]})"
-          $logger.debug("ReplSet Member Wait State Error: #{rse.message}")
-          raise Mongo::OperationFailure,
+          logger.info("ReplSet Member Wait State Error: #{rse.message}")
+          raise Mongo::Error::OperationFailure,
                 "#{INVALID_STATE_ERR_MESS}" +
                     " (State=>#{STATES[state]})"
         end
@@ -178,9 +179,9 @@ module MongoDB
               wait_time
           )
         rescue Mongo::Error::OperationFailure => rse
-          $logger.debug("ReplSet Init Error: #{rse.message}")
+          logger.info("ReplSet Init Error: #{rse.message}")
           if rse.message =~ /#{INIT_FAILED_ERR_MESS_REGEX}/
-            $logger.debug('Replica set previously initiated')
+            logger.info('Replica set previously initiated')
           else
             raise
           end
@@ -194,8 +195,8 @@ module MongoDB
       rescue Mongo::Error::OperationFailure => error
         raise unless force
         reconfig_attempts = 0
-        $logger.debug('Reconfig Status error:')
-        $logger.debug("#{error.message}")
+        logger.info('Reconfig Status error:')
+        logger.info("#{error.message}")
         unless (reconfig_attempts += 1) >= RECONFIG_ATTEMPTS
           sleep(RECONFIG_WAIT)
           retry
@@ -224,7 +225,7 @@ module MongoDB
         # determine which is the case, it is only safe to remove members
         # if the replica set has been found
         unless replica_set?
-          raise Mongo::OperationFailure,
+          raise Mongo::Error::OperationFailure,
                 'MongoDB Replica Set could not be found.' +
                     ' No members will be removed from config.'
         end
@@ -232,7 +233,7 @@ module MongoDB
           !(NON_FAILED_STATES.include? m['state'] and m['health'] == 1)
         }
         failed_members.map { |m| m['name'] }
-      rescue NoMethodError, Mongo::OperationFailure
+      rescue NoMethodError, Mongo::Error::OperationFailure
         []
       end
     end
@@ -249,7 +250,7 @@ module MongoDB
       # if we're adding a members then this implies that there might be failed members to remove
       members_to_remove = get_members_to_remove
       if members_to_remove.any?
-        $logger.debug("Target members to remove from Replica Set: #{members_to_remove}...")
+        logger.info("Target members to remove from Replica Set: #{members_to_remove}...")
         replica_set_config['members'].reject! { |m| members_to_remove.include? m['host'] }
       end
 
@@ -269,13 +270,13 @@ module MongoDB
         }
       end
 
-      $logger.debug('Reconfiguring Replica Set:')
-      $logger.debug("#{new_config.inspect}")
+      logger.info('Reconfiguring Replica Set:')
+      logger.info("#{new_config.inspect}")
       begin
         self.replica_set_reconfig(new_config, true)
       rescue => ecfg
-        $logger.debug('Reconfiguring Replica Set Failed:')
-        $logger.debug("#{ecfg.message}")
+        logger.info('Reconfiguring Replica Set Failed:')
+        logger.info("#{ecfg.message}")
         raise
       end
       expected_member_states = %w(PRIMARY SECONDARY STARTUP2)
@@ -290,7 +291,7 @@ module MongoDB
     end
 
     def add_this_host(visibility=true)
-      $logger.debug("Attempting to add #@this_host_ip to Replica Set...")
+      logger.info("Attempting to add #@this_host_ip to Replica Set...")
       self.add_or_replace_member(@this_host_key, visibility)
     end
 
@@ -336,7 +337,7 @@ module MongoDB
     def disconnect!
       # TODO - when mongo 2.1.0 is released this can be refactored
       unless @client.nil?
-        $logger.debug("Disconnecting from MongoDB.....")
+        logger.info("Disconnecting from MongoDB.....")
         @client.cluster.servers.each{ |s| s.disconnect! }
         @client = nil
       end
@@ -357,35 +358,35 @@ module MongoDB
           # Assumption: if this succeeds then the replica set has already been initiated
           # previously and the service can be located on the network
           # (usually because the autoscaled member is simply adding itself back into the set)
-          $logger.debug("Connecting to MongoDB replica set (#{seed_list}).....")
+          logger.info("Connecting to MongoDB replica set (#{seed_list}).....")
           begin
             @client = replica_set_connect(seed_list, :primary_preferred)
-            $logger.debug('Connected to MongoDB replica set.....')
+            logger.info('Connected to MongoDB replica set.....')
             return @client
           rescue => rsce
             # Try a few more times before attempting to initiate the replica set
             # to allow for e.g. temporary network partitions.
-            $logger.debug('Failed to connect to MongoDB replica set.....')
-            $logger.debug("#{rsce.message}")
+            logger.info('Failed to connect to MongoDB replica set.....')
+            logger.info("#{rsce.message}")
             # possible network glitches where the other members can't be reached.
             if find_attempts < CONNECT_ATTEMPTS
             then
-              $logger.debug("Sleeping for #{CONNECT_WAIT} seconds.....")
+              logger.info("Sleeping for #{CONNECT_WAIT} seconds.....")
               sleep(CONNECT_WAIT)
-              $logger.debug("Trying again.")
-              $logger.debug("Failed attempts #{find_attempts} "+
+              logger.info("Trying again.")
+              logger.info("Failed attempts #{find_attempts} "+
                                 "of #{CONNECT_ATTEMPTS}.....")
             else
-              $logger.debug('Replica Set can not be located on the network!!')
+              logger.info('Replica Set can not be located on the network!!')
             end
           end
         end
       end
       # if can't connect to the replica set then connect locally
-      $logger.debug "Can't connect to the Replica Set"
-      $logger.debug 'Attempting to Connect to Mongodb locally...'
+      logger.info "Can't connect to the Replica Set"
+      logger.info 'Attempting to Connect to Mongodb locally...'
       @client = local_connect
-      $logger.debug('Connected locally because Replica Set could not be found.....')
+      logger.info('Connected locally because Replica Set could not be found.....')
       @client
     end
 

@@ -8,9 +8,11 @@
 require 'aws-sdk'
 require 'securerandom'
 require_relative '../aws/helpers'
+require_relative '../util/logger'
 
 module MongoDB
   class ReplicaSetConfig
+    include Util::LoggerMixin
 
     attr_reader :key
 
@@ -97,9 +99,9 @@ module MongoDB
             },
             :expected => { :SeedListName => { :comparison_operator => 'NULL'} }
           )
-          STDERR.puts 'added default record'
+          logger.info 'added default record'
         rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
-          STDERR.puts 'record exists'
+          logger.info 'record exists'
         end
         fetch_replica_data
       end

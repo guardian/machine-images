@@ -21,6 +21,7 @@ require_relative 'locksmith/dynamo_db'
 require_relative 'mongodb/repl_set'
 require_relative 'mongodb/rs_config'
 require_relative 'aws/helpers'
+require_relative 'util/logger'
 
 ## Set sys logger facility
 SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
@@ -45,6 +46,10 @@ def get_tag(tag_name)
   instance_tags[tag_name]
 end
 
+def logger
+  Util::SingletonLogger.instance.logger
+end
+
 def parse_options(args)
   # The options specified on the command line will be collected in *options*.
   # Set default values here.
@@ -61,8 +66,8 @@ def parse_options(args)
               'AZ secondary member visibility mask (combination of a+b+c)') do |v|
         options.visibility_mask = string_to_visibility_mask(v)
       end
-      opts.on('-D', '--debug', 'Run in debug mode') do
-        options.debug_mode = true
+      opts.on('-q', '--quiet', "Run in quiet mode (don't log to stderr") do
+        options.quiet_mode = true
       end
 
       opts.on_tail('-h', '--help', 'Show this message') do
@@ -79,34 +84,14 @@ def parse_options(args)
     options.visibility_mask ||= string_to_visibility_mask('abc')
 
   rescue => e
-    puts "\nOptions Error: #{e.message}" unless e.message.empty?
-    puts opts
-    puts
+    STDERR.puts "\nOptions Error: #{e.message}" unless e.message.empty?
+    STDERR.puts opts
+    STDERR.puts
     exit
   end
 
   options
 
-end
-
-# parse_options()
-
-def setup_logger(debug_mode=false)
-  ## Set up the sys logger.
-  #  If debug_mode is true, then we log to both STDERR and syslog.
-  #  Otherwise we only log to syslog.
-  logopt = Syslog::LOG_PID | Syslog::LOG_NDELAY
-
-  if !debug_mode
-    logmask = Syslog::LOG_INFO
-  else
-    logopt = logopt | Syslog::LOG_PERROR
-    logmask = Syslog::LOG_DEBUG
-  end
-
-  logger = Syslog.open(ident = $0, logopt = logopt, facility = SYS_LOG_FACILITY)
-  logger.mask = Syslog::LOG_UPTO(logmask)
-  logger
 end
 
 # Method to initiate the replica set
@@ -118,7 +103,7 @@ def initiate(replica_set)
     if replica_set.key != config.key
       raise FatalError, 'Member already belongs to a different Replica Set?!'
     else
-      $logger.debug 'Mongodb Replica set already inititated...'
+      logger.info 'Mongodb Replica set already inititated...'
       return
     end
   end
@@ -127,11 +112,11 @@ def initiate(replica_set)
     replica_set.initiate(false)
     replica_set.connect
   rescue Mongo::Error::OperationFailure => rinit
-    $logger.debug 'Failed to initiate Replica Set...'
-    $logger.debug rinit.message
+    logger.info 'Failed to initiate Replica Set...'
+    logger.info rinit.message
     raise
   end
-  $logger.debug 'Mongodb Replica set inititated...'
+  logger.info 'Mongodb Replica set inititated...'
 end
 
 ## main
@@ -147,8 +132,13 @@ Aws.config[:region] = AwsHelper::Metadata::region
 options = parse_options(ARGV)
 
 # Set up global logger
-$logger = setup_logger(options.debug_mode)
-$logger.info('MongoDB Add Replica Set Member.....')
+Util::SingletonLogger.instance.init_syslog(
+    ident = 'add_self_to_replset',
+    facility = Syslog::LOG_LOCAL1,
+    quiet_mode = options.quiet_mode
+)
+
+logger.info('MongoDB Add Replica Set Member.....')
 
 availability_zone = AwsHelper::Metadata::availability_zone[-1..-1]
 replica_set_config = MongoDB::ReplicaSetConfig.new
@@ -179,20 +169,20 @@ locksmith.lock(replica_set_config.key) do
       ## Assume from this point on that we may need to initiate the replica set
       ## but only if the seed list is empty which implies the replica set has not
       ## been deployed before.
-      $logger.debug('WARNING: Host Seed List is empty....initiating Replica Set!')
+      logger.info('WARNING: Host Seed List is empty....initiating Replica Set!')
       initiate(replica_set)
-      $logger.debug('Replica Set inititated')
+      logger.info('Replica Set inititated')
 
       # Add Admin User account if not already added.
       unless replica_set.authed?
       then
-        $logger.debug('Adding admin user....')
+        logger.info('Adding admin user....')
         begin
           replica_set.create_admin_user
-          $logger.debug('Admin user added.')
+          logger.info('Admin user added.')
         rescue => e
-          $logger.debug('Failed to add admin user.')
-          $logger.debug(e.message)
+          logger.info('Failed to add admin user.')
+          logger.info(e.message)
           raise
         end
       end
@@ -205,7 +195,7 @@ locksmith.lock(replica_set_config.key) do
     end
 
     # Add the member to the seed list.
-    $logger.debug("Ensuring #{replica_set.this_host_key} is in seed list")
+    logger.info("Ensuring #{replica_set.this_host_key} is in seed list")
     replica_set_config.add_seed(replica_set.this_host_key)
 
     # By now it should be possible to connect directly to the replica set
@@ -219,32 +209,32 @@ locksmith.lock(replica_set_config.key) do
       all_members = replica_set.member_names
       ghost_members = replica_set_config.seeds.reject { |m| all_members.include?(m) }
       ghost_members.each { |g|
-        $logger.debug("Removing #{g} from seed list")
+        logger.info("Removing #{g} from seed list")
         replica_set_config.remove_seed(g)
       }
     end
 
   rescue FatalError => fe
-    $logger.debug('FATAL Error. Cannot continue:')
-    $logger.debug("#{fe.message}")
+    logger.info('FATAL Error. Cannot continue:')
+    logger.info("#{fe.message}")
     raise
   rescue => ce
     # Attempt to reconfigure the replica set again for a few times unless a fatal error occurs
     if (rs_add_attempts += 1) < MongoDB::RECONFIG_MAX_ATTEMPTS
     then
-      $logger.debug('Failed to add MongoDB Replica Set Member.....'+
+      logger.info('Failed to add MongoDB Replica Set Member.....'+
                         "(attempt = #{rs_add_attempts})")
-      $logger.debug("#{ce.message}")
-      $logger.debug("Sleeping for #{MongoDB::CONNECT_WAIT} seconds.....")
+      logger.info("#{ce.message}")
+      logger.info("Sleeping for #{MongoDB::CONNECT_WAIT} seconds.....")
       sleep(MongoDB::CONNECT_WAIT)
       retry
     end
-    $logger.info("FAILED: #{ce.message}")
-    $logger.info("EXITING...")
+    logger.info("FAILED: #{ce.message}")
+    logger.info("EXITING...")
     raise
   ensure
     replica_set.disconnect!
   end
 end
 
-$logger.info('MongoDB Add Replica Set Member COMPLETE!')
+logger.info('MongoDB Add Replica Set Member COMPLETE!')

@@ -2,10 +2,12 @@
 # Taken from http://r.32k.io/locking-with-dynamodb and the source code
 # at https://github.com/bgentry/lock-smith
 require 'thread'
-require_relative './log'
+require_relative '../util/logger'
 
 module Locksmith
   class DynamoDB
+    include Util::LoggerMixin
+
     TTL = 120
     MAX_LOCK_ATTEMPTS = 20
     LOCK_TIMEOUT = 120
@@ -53,6 +55,7 @@ module Locksmith
           begin
             release_lock(name, new_rev)
           rescue Aws::DynamoDB::Errors::ConditionalCheckFailedException
+            # ignored
           end
           log(:at => 'timeout-lock-released', :lock => name, :rev => new_rev)
         end
@@ -129,9 +132,9 @@ module Locksmith
         )
 
         # wait for table to be created
-        log(:at => 'ensure_table_exists', :table => @lock_table_name, :status => "waiting")
-        dynamo.wait_until(:table_exists, :table_name => @lock_table_name)
-        log(:at => 'ensure_table_exists', :table => @lock_table_name, :status => "created")
+        log(:at => 'ensure_table_exists', :table => @lock_table_name, :status => "creating") do
+          dynamo.wait_until(:table_exists, :table_name => @lock_table_name)
+        end
       end
     end
 
@@ -142,7 +145,21 @@ module Locksmith
     end
 
     def log(data, &blk)
-      Log.log({:ns => 'dynamo-lock'}.merge(data), &blk)
+      log_impl({:ns => 'dynamo-lock'}.merge(data), &blk)
+    end
+
+    def log_impl(data)
+      result = nil
+      if block_given?
+        start = Time.now
+        result = yield
+        data.merge(:elapsed => Time.now - start)
+      end
+      data.reduce(out=String.new) do |s, tup|
+        s << [tup.first, tup.last].join('=') << ' '
+      end
+      logger.info(out)
+      result
     end
 
   end
