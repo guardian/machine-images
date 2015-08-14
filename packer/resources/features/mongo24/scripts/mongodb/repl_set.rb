@@ -19,8 +19,8 @@ module MongoDB
 
   # Number of attempts, and wait in seconds for each attempt, for MongoDB replica set member to
   # complete a reconfiguration (i.e. following a 'replSetReconfig' command).
-  RECONFIG_WAIT = 3
-  RECONFIG_ATTEMPTS = 5
+  RECONFIG_WAIT = 10
+  RECONFIG_ATTEMPTS = 10
 
   # MongoDB replic set member states that are considered to be a 'non-failed' state
   NON_FAILED_STATES = [0, 1, 2, 3, 5, 6, 7, 9]
@@ -52,8 +52,7 @@ module MongoDB
   class ReplicaSet
     include Util::LoggerMixin
 
-    attr_accessor :this_host_added
-    attr_reader :this_host_key, :name, :config
+    attr_reader :this_host_key, :config
 
     def initialize(config)
       @config = config
@@ -134,23 +133,22 @@ module MongoDB
       while wait_attempts < max_wait_attempts
         begin
           members = self.get_status['members']
-          this_member = members.find { |m| m['name'] == @this_host_key }
+          logger.info("looking for #{@this_host_key} in members: #{members}")
+          this_member = members.find { |m|
+            logger.info("checking against #{m}")
+            m['name'] == @this_host_key
+          }
           state = this_member['state']
-        rescue
+          logger.info("state recovered is #{state}")
+        rescue => exception
+          logger.info("exception: #{exception.inspect}")
           state = STATES.invert['UNKNOWN']
         end
         logger.info("ReplSet Initiation Member State: #{STATES[state]}")
+        logger.info("Waiting for one of #{expected_states.join(', ')}")
 
         return if expected_states.include? STATES[state]
 
-        unless NON_FAILED_STATES.include? state
-          # an invalid state - raise an exception
-          "#{INVALID_STATE_ERR_MESS} (State=>#{STATES[state]})"
-          logger.info("ReplSet Member Wait State Error: #{rse.message}")
-          raise Mongo::Error::OperationFailure,
-                "#{INVALID_STATE_ERR_MESS}" +
-                    " (State=>#{STATES[state]})"
-        end
         wait_attempts++
         sleep(wait_time)
       end
@@ -279,6 +277,11 @@ module MongoDB
         logger.info("#{ecfg.message}")
         raise
       end
+
+      # reconnect after a reconfiguration
+      sleep(1)
+      connect
+
       expected_member_states = %w(PRIMARY SECONDARY STARTUP2)
       max_wait_attempts = RECONFIG_ATTEMPTS
       wait_time = RECONFIG_WAIT
