@@ -176,6 +176,13 @@
                                 "kinesis:PutRecord"
                             ],
                             "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
+                        },
+                        {
+                            "Effect": "Allow",
+                            "Action": [
+                                "kinesis:DescribeStream"
+                            ],
+                            "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
                         }
                     ]
                 },
