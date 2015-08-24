@@ -173,13 +173,7 @@
                         {
                             "Effect": "Allow",
                             "Action": [
-                                "kinesis:PutRecord"
-                            ],
-                            "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
+                                "kinesis:PutRecord",
                                 "kinesis:DescribeStream"
                             ],
                             "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
@@ -209,20 +203,8 @@
                         {
                             "Effect": "Allow",
                             "Action": [
-                                "kinesis:GetRecords"
-                            ],
-                            "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
-                                "kinesis:GetShardIterator"
-                            ],
-                            "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
-                        },
-                        {
-                            "Effect": "Allow",
-                            "Action": [
+                                "kinesis:GetRecords",
+                                "kinesis:GetShardIterator",
                                 "kinesis:DescribeStream"
                             ],
                             "Resource" : { "Fn::Join" : [ "", [ "arn:aws:kinesis:", { "Ref" : "AWS::Region" }, ":", { "Ref" : "AWS::AccountId" }, ":stream/", { "Ref" : "KinesisStream" } ]]}
