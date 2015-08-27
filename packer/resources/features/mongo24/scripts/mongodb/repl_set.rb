@@ -194,7 +194,7 @@ module MongoDB
         raise unless force
         reconfig_attempts = 0
         logger.info('Reconfig Status error:')
-        logger.info("#{error.message}")
+        logger.info("#{error.inspect}")
         unless (reconfig_attempts += 1) >= RECONFIG_ATTEMPTS
           sleep(RECONFIG_WAIT)
           retry
@@ -257,7 +257,7 @@ module MongoDB
       new_config = replica_set_config
       unless new_config['members'].any? {
           |m| m['host'] == host_key or members_to_remove.include? host_key
-      }
+        }
         # get an id for the new member where the id is not already in use
         new_member_id = new_config['members'].map { |m| m['_id'] }.max + 1
         new_config['members'] = new_config['members'] << {
@@ -274,7 +274,7 @@ module MongoDB
         self.replica_set_reconfig(new_config, true)
       rescue => ecfg
         logger.info('Reconfiguring Replica Set Failed:')
-        logger.info("#{ecfg.message}")
+        logger.info("#{ecfg.inspect}")
         raise
       end
 
