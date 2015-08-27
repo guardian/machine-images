@@ -43,8 +43,11 @@
     },
     {
       "type": "shell",
-      "script": "resources/features/mongo24/install.sh",
-      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+      "inline": [
+        "/opt/features/gnm-dns/install.sh",
+        "/opt/features/mongo24/install.sh"
+      ],
+      "inline_shebang": "sudo -E bash -x"
     }
   ]
 }
