@@ -1,0 +1,383 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "MongoDB test stack",
+  "Parameters": {
+    "KeyName": {
+      "Description": "The EC2 Key Pair to allow SSH access to the instance",
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "Stage": {
+      "Description": "Environment name",
+      "Type": "String",
+      "AllowedValues": [
+        "CODE",
+        "QA",
+        "RELEASE",
+        "PROD"
+      ]
+    },
+    "VpcId": {
+      "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "PrivateVpcSubnets": {
+      "Description": "Subnets to use in VPC for private EC2 instances eg. subnet-abcd1234",
+      "Type": "List<AWS::EC2::Subnet::Id>"
+    },
+    "MachineImagesAMI": {
+      "Description": "AMI id from the machine-images repo",
+      "Type": "String"
+    },
+    "Size": {
+      "Description": "Size of ASG",
+      "Type": "Number",
+      "Default": "3"
+    },
+    "CustomerMasterKey": {
+      "Description": "The KMS CMK to use to encrypt the EBS volume",
+      "Type": "String"
+    }
+  },
+  "Resources": {
+    "ServerInstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "ServerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [
+                  "ec2.amazonaws.com"
+                ]
+              },
+              "Action": [
+                "sts:AssumeRole"
+              ]
+            }
+          ]
+        },
+        "Path": "/"
+      }
+    },
+    "DescribeEC2Policy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "DescribeEC2Policy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "EC2:Describe*",
+                "elasticloadbalancing:Describe*"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "cloudformation:DescribeStacks"
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Ref": "AWS::StackId"
+              }
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "CreateEncryptedVolumePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "CreateEncryptedVolumePolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "ec2:CreateVolume",
+                "ec2:AttachVolume",
+                "ec2:CreateTags",
+                "ec2:DescribeTags",
+                "ec2:DescribeVolumes",
+                "ec2:ModifyInstanceAttribute"
+              ],
+              "Effect": "Allow",
+              "Resource": "*"
+            },
+            {
+              "Action": [
+                "kms:CreateGrant",
+                "kms:GenerateDataKeyWithoutPlaintext",
+                "kms:Decrypt"
+              ],
+              "Effect": "Allow",
+              "Resource": { "Ref": "CustomerMasterKey"}
+            }
+          ]
+        },
+        "Roles": [{"Ref": "ServerRole"}]
+      }
+    },
+    "GetDistributablesPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GetDistributablesPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::composer-dist/*"
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "GetConfigPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GetConfigPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::guconf-flexible/*"
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "PushLogsPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "PushLogs",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:*"
+              ],
+              "Resource": [
+                "arn:aws:logs:*:*:*"
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "LockTablePolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "LockTable",
+        "PolicyDocument": {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:DescribeTable",
+                "dynamodb:CreateTable",
+                "dynamodb:PutItem",
+                "dynamodb:GetItem",
+                "dynamodb:UpdateItem"
+              ],
+              "Resource": [
+                "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo-initialisation",
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo.rsconfig.flexible-db-",
+                      {
+                        "Ref": "Stage"
+                      }
+                    ]
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "CloudwatchPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "CloudwatchPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "cloudwatch:PutMetricData"
+              ],
+              "Resource": "*"
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "SSHSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow SSH access from the office",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "10.0.0.0/8"
+          }
+        ]
+      }
+    },
+    "ReplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow connections to mongo DB",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "CidrIp": "10.0.0.0/8"
+          }
+        ]
+      }
+    },
+    "AutoscalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "VPCZoneIdentifier": {
+          "Ref": "PrivateVpcSubnets"
+        },
+        "LaunchConfigurationName": {
+          "Ref": "LaunchConfig"
+        },
+        "MinSize": 1,
+        "MaxSize": {
+          "Ref": "Size"
+        },
+        "DesiredCapacity": {
+          "Ref": "Size"
+        },
+        "Cooldown": "180",
+        "HealthCheckType": "EC2",
+        "HealthCheckGracePeriod": 300,
+        "Tags": [
+          {
+            "Key": "Stage",
+            "Value": {
+              "Ref": "Stage"
+            },
+            "PropagateAtLaunch": "true"
+          },
+          {
+            "Key": "Stack",
+            "Value": "flexible",
+            "PropagateAtLaunch": "true"
+          },
+          {
+            "Key": "App",
+            "Value": "db",
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      }
+    },
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "KeyName": {
+          "Ref": "KeyName"
+        },
+        "ImageId": {
+          "Ref": "MachineImagesAMI"
+        },
+        "SecurityGroups": [
+          {
+            "Ref": "SSHSecurityGroup"
+          },
+          {
+            "Ref": "ReplicationSecurityGroup"
+          }
+        ],
+        "InstanceType": "m4.large",
+        "IamInstanceProfile": {
+          "Ref": "ServerInstanceProfile"
+        },
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": [
+              "\n",
+              [
+                "#!/bin/bash -ev",
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -u mongodb -x -k ", { "Ref": "CustomerMasterKey" }] ] },
+                "/opt/features/mongo24/configure.sh"
+              ]
+            ]
+          }
+        }
+      }
+    }
+  }
+}
