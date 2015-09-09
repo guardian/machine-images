@@ -12,7 +12,7 @@ apt-get install -y mongodb-10gen=2.4.9 ruby ruby-dev sysfsutils
 
 #cp ${SCRIPTPATH}/mongodb.service /etc/systemd/system/mongodb.service
 
-service mongodb start
+#service mongodb restart
 
 # TODO: replace with bundler
 echo "Installing Ruby gems for helper scripts"
