@@ -1,4 +1,5 @@
 #!/usr/bin/env ruby
+require 'ostruct'
 require 'optparse'
 require 'erb'
 require 'aws-sdk'
