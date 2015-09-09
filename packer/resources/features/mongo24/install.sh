@@ -10,7 +10,7 @@ echo 'deb http://downloads-distro.mongodb.org/repo/ubuntu-upstart dist 10gen' > 
 apt-get update
 apt-get install -y mongodb-10gen=2.4.9 ruby ruby-dev sysfsutils
 
-cp ${SCRIPTPATH}/mongodb.service /etc/systemd/system/mongodb.service
+#cp ${SCRIPTPATH}/mongodb.service /etc/systemd/system/mongodb.service
 
 systemctl start mongodb
 

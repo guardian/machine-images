@@ -5,7 +5,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-4aa8ea3d"
+    "euw1_source_ami": "ami-9d2f0fea"
   },
   "builders": [
     {
@@ -38,13 +38,14 @@
     },
     {
       "type": "shell",
-      "script": "resources/ubuntu-vivid.sh",
+      "script": "resources/ubuntu-trusty.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
     },
     {
       "type": "shell",
       "inline": [
         "/usr/bin/sudo -E /bin/bash -x /opt/features/gnm-dns/install.sh",
+        "/bin/sleep 2",
         "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo24/install.sh"
       ]
     }
