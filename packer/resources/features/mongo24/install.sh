@@ -12,7 +12,7 @@ apt-get install -y mongodb-10gen=2.4.9 ruby ruby-dev sysfsutils
 
 #cp ${SCRIPTPATH}/mongodb.service /etc/systemd/system/mongodb.service
 
-systemctl start mongodb
+service mongodb start
 
 # TODO: replace with bundler
 echo "Installing Ruby gems for helper scripts"
@@ -24,4 +24,4 @@ echo "Installing rsyslog config"
 cat > /etc/rsyslog.d/31-mongo-scripts.conf <<EOF
 local1.*    /var/log/mongodb/scripts.log
 EOF
-systemctl restart rsyslog
+service rsyslog restart
