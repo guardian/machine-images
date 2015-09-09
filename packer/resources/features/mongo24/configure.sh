@@ -19,7 +19,7 @@ chmod 400 ${KEY_FILE}
 ${SCRIPTPATH}/scripts/mongodb_configure.rb -k ${KEY_FILE} -c ${CONFIG_FILE} -t ${SCRIPTPATH}/mongodb.conf.erb
 
 # Restart mongodb
-systemctl restart mongodb
+service mongodb restart
 
 # Run the replica set initialisation script
 ${SCRIPTPATH}/scripts/mongodb_add_self_to_replset.rb
