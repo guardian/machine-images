@@ -34,14 +34,12 @@ locksmith = Locksmith::DynamoDB.new(
 replica_set_config = MongoDB::ReplicaSetConfig.new
 
 locksmith.lock(replica_set_config.key) do
-  if options.keyFilePath
-    security_data = replica_set_config.security_data
-    # write out keyFile
-    File.write(options.keyFilePath, security_data[:key])
-  end
   if options.configFilePath && options.templateFile
     # write out mongodb.conf
-    @replica_set_name = replica_set_config.name
+    mms_data = replica_set_config.mms_data
+    @mmsGroupId = mms_data['GroupId']
+    @mmsApiKey = mms_data['ApiKey']
+    @mmsBaseUrl = mms_data['BaseUrl']
     template = ERB.new(File.read(options.templateFile))
     File.write(options.configFilePath, template.result)
   end
