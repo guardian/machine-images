@@ -19,4 +19,4 @@ ${SCRIPTPATH}/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/auto
 start mongodb-mms-automation-agent
 
 # Run the replica set initialisation script
-#${SCRIPTPATH}/scripts/mongodb_add_self_to_replset.rb
+${SCRIPTPATH}/scripts/mongodb_add_self_to_replset_mms.rb
