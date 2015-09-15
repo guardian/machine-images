@@ -221,6 +221,7 @@ def clean_up_dead_nodes(mms)
 
   # find unknown hosts
   unknown_hosts = mms.hosts['results'].reject{|h| mongo_nodes.include?(h['hostname'])}
+  # TODO - filter by the last seen date to ensure it really doesn't exist
   if unknown_hosts.length > 0
     logger.info "#{unknown_hosts.length}"
     logger.info "DELETE hosts: #{unknown_hosts.map{|h| h['hostname']}}"
