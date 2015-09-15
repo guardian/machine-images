@@ -90,26 +90,26 @@ class MMS
     self.class.digest_auth @mms_config['AutomationApiUser'], @mms_config['AutomationApiKey']
   end
 
-  def automationStatus
+  def automation_status
     self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationStatus")
   end
 
-  def automationConfig
+  def automation_config
     self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationConfig")
   end
 
-  def put_automationConfig(new_config, field=nil)
+  def put_automation_config(new_config, field=nil)
     if field.nil?
       config = new_config
     else
       puts "Putting new config for field #{field}"
-      config = automationConfig
+      config = automation_config
       config[field] = new_config
     end
     self.class.put(
       "/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationConfig",
       :body => config.to_json,
-      :headers => { "Content-Type" => "application/json" }
+      :headers => { 'Content-Type' => 'application/json'}
     )
   end
 
@@ -120,6 +120,21 @@ class MMS
   def automation_agents
     self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/agents/AUTOMATION")
   end
+
+  def wait_for_goal_state
+    hosts_to_check = automation_agents['results'].map{ |e| e['hostname'] }
+    loop do
+      status = automation_status
+      puts status
+      goal = status['goalVersion']
+      break if status['processes'].all? { |e| goal == e['lastGoalVersionAchieved'] || !hosts_to_check.include?(e['hostname']) }
+      sleep 5
+    end
+  end
+end
+
+def save_json(data, filename)
+  File.write(filename, JSON.pretty_generate(data))
 end
 ## main
 
@@ -152,23 +167,28 @@ locksmith = Locksmith::DynamoDB.new(
     ttl = 3600
 )
 
-# first of all, check that authentication has been set up on the local
-# instance
+def set_version(mms, target)
+  # Change the version of mongo
+  config = mms.automation_config
+  processes = config['processes']
+  processes.each { |e| e['version'] = '2.4.14' }
+  response = mms.put_automation_config(config)
+  if response.code >= 400
+    raise FatalError, "API respose code was #{response.code}: #{response.body}"
+  end
 
+  mms.wait_for_goal_state
+end
 
-locksmith.lock(replica_set_config.key) do
-
-  mms_config = replica_set_config.mms_data
-
-  mms = MMS.new(mms_config)
-
+def add_self_process(mms)
   agents = mms.automation_agents
   this_host = agents['results'].find { |e| e['hostname'].include?(Socket.gethostname) }
-  if this_host.nil? then raise FatalError, 'This host does not have a registered automation agent' end
+  if this_host.nil?
+    raise FatalError, 'This host does not have a registered automation agent'
+  end
 
-  # Install the process on the new node
-
-  config = mms.automationConfig
+  config = mms.automation_config
+  save_json(config, 'initial.json')
   processes = config['processes']
   this_process = processes.find { |e| e['hostname'] == this_host['hostname'] }
   if this_process.nil?
@@ -176,19 +196,26 @@ locksmith.lock(replica_set_config.key) do
     new_node['hostname'] = this_host['hostname']
     new_node['alias'] = IPSocket.getaddress(Socket.gethostname)
     new_node['name'] = Socket.gethostname
+    new_node.delete('authSchemaVersion')
     processes << new_node
     puts "Adding #{this_host['hostname']} to processes list with config:"
     puts JSON.pretty_generate(config)
+    save_json(config, 'modified.json')
+    response = mms.put_automation_config(config)
+    if response.code >= 400
+      raise FatalError, "API response code was #{response.code}"
+    end
 
-    response = mms.put_automationConfig(config)
-    if response.code >= 400 then raise FatalError, "API respose code was #{response.code}" end
+    mms.wait_for_goal_state
+  else
+    puts "This host is already in the processes list: #{this_process}"
   end
+end
 
-  while true
-    puts mms.automationStatus
-    sleep 10
-  end
-
+locksmith.lock(replica_set_config.key) do
+  mms_config = replica_set_config.mms_data
+  mms = MMS.new(mms_config)
+  add_self_process(mms)
 end
 
 logger.info('MongoDB Configure Replica Set Member in MMS COMPLETE!')
