@@ -196,8 +196,14 @@ def add_self_process(mms)
     new_node['hostname'] = this_host['hostname']
     new_node['alias'] = IPSocket.getaddress(Socket.gethostname)
     new_node['name'] = Socket.gethostname
-    new_node.delete('authSchemaVersion')
     processes << new_node
+
+    replica_set_members = config['replicaSets'][0]['members']
+    new_member = replica_set_members[0].clone
+    new_member['host'] = new_node['name']
+    new_member['_id'] = replica_set_members.map{|e| e['_id']}.max + 1
+    replica_set_members << new_member
+
     puts "Adding #{this_host['hostname']} to processes list with config:"
     puts JSON.pretty_generate(config)
     save_json(config, 'modified.json')
