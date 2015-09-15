@@ -33,8 +33,13 @@ class FatalError < StandardError
 end
 
 def get_tag(tag_name)
-  instance_tags ||= AwsHelper::InstanceData::get_tags
+  instance_tags ||= AwsHelper::InstanceData::get_custom_tags
   instance_tags[tag_name]
+end
+
+def get_identity_instances
+  tags = AwsHelper::InstanceData::get_custom_tags
+  AwsHelper::EC2::get_instances(tags)
 end
 
 def logger
@@ -106,11 +111,15 @@ class MMS
       config = automation_config
       config[field] = new_config
     end
-    self.class.put(
+    response = self.class.put(
       "/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationConfig",
       :body => config.to_json,
       :headers => { 'Content-Type' => 'application/json'}
     )
+    if response.code >= 400
+      raise FatalError, "API response code was #{response.code}"
+    end
+    response
   end
 
   def hosts
@@ -122,14 +131,17 @@ class MMS
   end
 
   def wait_for_goal_state
+    logger.info 'Entering wait for goal state'
     hosts_to_check = automation_agents['results'].map{ |e| e['hostname'] }
     loop do
       status = automation_status
-      puts status
       goal = status['goalVersion']
-      break if status['processes'].all? { |e| goal == e['lastGoalVersionAchieved'] || !hosts_to_check.include?(e['hostname']) }
+      last_goals = status['processes'].select{ |e| hosts_to_check.include?(e['hostname']) }.map{|e| e['lastGoalVersionAchieved']}
+      logger.info "Goal: #{goal} Last achieved: #{last_goals}"
+      break if last_goals.all? { |e| goal == e }
       sleep 5
     end
+    logger.info 'Successfully reached goal state'
   end
 end
 
@@ -171,16 +183,46 @@ def set_version(mms, target)
   # Change the version of mongo
   config = mms.automation_config
   processes = config['processes']
-  processes.each { |e| e['version'] = '2.4.14' }
-  response = mms.put_automation_config(config)
-  if response.code >= 400
-    raise FatalError, "API respose code was #{response.code}: #{response.body}"
-  end
-
+  processes.each { |e| e['version'] = target }
+  mms.put_automation_config(config)
   mms.wait_for_goal_state
 end
 
-def add_self_process(mms)
+def clean_up_dead_nodes(mms)
+  # get the instances that we expect to be in the list
+  mongo_nodes = get_identity_instances.map{|i| i.private_dns_name }
+  logger.info "Known mongo nodes: #{mongo_nodes}"
+
+  config = mms.automation_config
+  save_json(config, 'cleanup-01.json')
+
+  # find unknown processes
+  unknown_processes = config['processes'].reject{|p| mongo_nodes.include?(p['hostname']) }
+  if unknown_processes.length > 0
+    unknown_names = unknown_processes.map{|p| p['name']}
+
+    logger.info "Unknown process names: #{unknown_names}"
+
+    # remove related process
+    config['processes'].reject!{|p| unknown_processes.include?(p)}
+
+    # remove related replicaSet members
+    config['replicaSets'].each{|rs|
+      rs['members'].reject!{|m|
+        unknown_names.include?(m['host'])
+      }
+    }
+    save_json(config, 'cleanup-02.json')
+
+    mms.put_automation_config(config)
+    mms.wait_for_goal_state
+  end
+
+  # find unknown hosts
+  mms.hosts
+end
+
+def add_self(mms)
   agents = mms.automation_agents
   this_host = agents['results'].find { |e| e['hostname'].include?(Socket.gethostname) }
   if this_host.nil?
@@ -204,24 +246,21 @@ def add_self_process(mms)
     new_member['_id'] = replica_set_members.map{|e| e['_id']}.max + 1
     replica_set_members << new_member
 
-    puts "Adding #{this_host['hostname']} to processes list with config:"
-    puts JSON.pretty_generate(config)
+    logger.info "Adding #{this_host['hostname']} to processes list with config:"
     save_json(config, 'modified.json')
-    response = mms.put_automation_config(config)
-    if response.code >= 400
-      raise FatalError, "API response code was #{response.code}"
-    end
-
+    mms.put_automation_config(config)
     mms.wait_for_goal_state
   else
-    puts "This host is already in the processes list: #{this_process}"
+    logger.info "This host is already in the processes list: #{this_process}"
   end
 end
 
 locksmith.lock(replica_set_config.key) do
   mms_config = replica_set_config.mms_data
   mms = MMS.new(mms_config)
-  add_self_process(mms)
+  clean_up_dead_nodes(mms)
+  add_self(mms)
+  set_version(mms, '2.4.14')
 end
 
 logger.info('MongoDB Configure Replica Set Member in MMS COMPLETE!')

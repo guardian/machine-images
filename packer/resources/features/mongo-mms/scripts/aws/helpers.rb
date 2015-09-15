@@ -23,6 +23,22 @@ module AwsHelper
       }).tags
       Hash[ tag_results.map{ |tag| [tag.key, tag.value]} ]
     end
+
+    def self.get_custom_tags(instance_id = Metadata.instance_id)
+      tags = self.get_tags(instance_id)
+      tags.reject{ |key, value| key.start_with?('aws:') }
+    end
+  end
+
+  class EC2
+    def self.get_instances(tags)
+      filter = tags.map{|key, value|
+        {:name => "tag:#{key}", :values => [value]}
+      }
+      ec2 = Aws::EC2::Client.new
+      instances = ec2.describe_instances({ filters: filter })
+      instances.reservations.map{|r| r.instances}.flatten
+    end
   end
 
   class Metadata
