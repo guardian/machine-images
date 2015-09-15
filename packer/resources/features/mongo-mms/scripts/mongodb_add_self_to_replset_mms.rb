@@ -91,43 +91,44 @@ class MMS
 
   def initialize(mms_config)
     @mms_config = mms_config
-    self.class.base_uri @mms_config['BaseUrl']
+    self.class.base_uri "#{@mms_config['BaseUrl']}/api/public/v1.0/groups/#{@mms_config['GroupId']}"
     self.class.digest_auth @mms_config['AutomationApiUser'], @mms_config['AutomationApiKey']
   end
 
   def automation_status
-    self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationStatus")
+    self.class.get("/automationStatus")
   end
 
   def automation_config
-    self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationConfig")
+    self.class.get("/automationConfig")
   end
 
-  def put_automation_config(new_config, field=nil)
-    if field.nil?
-      config = new_config
-    else
-      puts "Putting new config for field #{field}"
-      config = automation_config
-      config[field] = new_config
-    end
+  def put_automation_config(new_config)
     response = self.class.put(
-      "/api/public/v1.0/groups/#{@mms_config['GroupId']}/automationConfig",
-      :body => config.to_json,
+      "/automationConfig",
+      :body => new_config.to_json,
       :headers => { 'Content-Type' => 'application/json'}
     )
     if response.code >= 400
-      raise FatalError, "API response code was #{response.code}"
+      raise FatalError, "API response code was #{response.code}: #{response.body}"
     end
     response
   end
 
   def hosts
-    self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/hosts")
+    self.class.get("/hosts")
+  end
+
+  def delete_hosts(id)
+    response = self.class.delete("/hosts/#{id}")
+    if response.code >= 400
+      raise FatalError, "API response code was #{response.code}: #{response.body}"
+    end
+    response
   end
 
   def automation_agents
-    self.class.get("/api/public/v1.0/groups/#{@mms_config['GroupId']}/agents/AUTOMATION")
+    self.class.get("/agents/AUTOMATION")
   end
 
   def wait_for_goal_state
@@ -219,7 +220,14 @@ def clean_up_dead_nodes(mms)
   end
 
   # find unknown hosts
-  mms.hosts
+  unknown_hosts = mms.hosts['results'].reject{|h| mongo_nodes.include?(h['hostname'])}
+  if unknown_hosts.length > 0
+    logger.info "#{unknown_hosts.length}"
+    logger.info "DELETE hosts: #{unknown_hosts.map{|h| h['hostname']}}"
+    unknown_hosts.each{ |uh|
+      mms.delete_hosts(uh['id'])
+    }
+  end
 end
 
 def add_self(mms)
@@ -251,7 +259,7 @@ def add_self(mms)
     mms.put_automation_config(config)
     mms.wait_for_goal_state
   else
-    logger.info "This host is already in the processes list: #{this_process}"
+    logger.info 'This host is already in the processes list, no work to do'
   end
 end
 
@@ -260,7 +268,6 @@ locksmith.lock(replica_set_config.key) do
   mms = MMS.new(mms_config)
   clean_up_dead_nodes(mms)
   add_self(mms)
-  set_version(mms, '2.4.14')
 end
 
 logger.info('MongoDB Configure Replica Set Member in MMS COMPLETE!')
