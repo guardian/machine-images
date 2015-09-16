@@ -83,21 +83,28 @@ def parse_options(args)
   end
 
   options
-
 end
-
-
-
 
 def save_json(data, filename)
   File.write(filename, JSON.pretty_generate(data))
 end
 
-def set_version(ops_manager, target)
+def set_version(ops_manager, replica_set_name, target)
   # Change the version of mongo
   config = ops_manager.automation_config
+
+  # Get the process names for the named replica set
+  rs = find_replica_set(config, replica_set_name)
+  rs_process_names = rs['members'].map{|m| m['host']}
+
+  # Update the version
   processes = config['processes']
-  processes.each { |e| e['version'] = target }
+  processes.each { |p|
+    if rs_process_names.include?(p['name'])
+      logger.info "Updating process #{p['hostname']} to version #{target}"
+      p['version'] = target
+    end
+  }
   ops_manager.put_automation_config(config)
   ops_manager.wait_for_goal_state
 end
