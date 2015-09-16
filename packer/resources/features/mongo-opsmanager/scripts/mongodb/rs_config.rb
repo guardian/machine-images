@@ -39,13 +39,12 @@ module MongoDB
       rs_data = fetch_replica_data
       { :key => rs_data['Key'],
         :admin_user => rs_data['AdminUser'],
-        :admin_password => rs_data['AdminPassword'],
-        :mms => rs_data['MMS'] }
+        :admin_password => rs_data['AdminPassword'] }
     end
 
-    def mms_data
+    def ops_manager_data
       rs_data = fetch_replica_data
-      rs_data['MMS']
+      rs_data['OpsManager']
     end
 
     def add_seed(obj)
@@ -102,7 +101,7 @@ module MongoDB
               :AdminUser => 'aws-admin',
               :AdminPassword => admin_password,
               :Key => key,
-              :MMS => {}
+              :OpsManager => {}
             },
             :expected => { :SeedListName => { :comparison_operator => 'NULL'} }
           )

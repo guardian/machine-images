@@ -371,8 +371,8 @@
               "\n",
               [
                 "#!/bin/bash -ev",
-                "/opt/features/mongo-mms/configure.sh",
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -u mongodb -x -k ", { "Ref": "CustomerMasterKey" }] ] }
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -x -k ", { "Ref": "CustomerMasterKey" }] ] },
+                "/opt/features/mongo-opsmanager/configure.sh"
               ]
             ]
           }

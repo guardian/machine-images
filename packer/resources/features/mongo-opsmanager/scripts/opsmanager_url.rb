@@ -17,6 +17,6 @@ locksmith = Locksmith::DynamoDB.new(
 replica_set_config = MongoDB::ReplicaSetConfig.new
 
 locksmith.lock(replica_set_config.key) do
-  mms_data = replica_set_config.mms_data
-  puts mms_data['BaseUrl']
+  ops_manager_data = replica_set_config.ops_manager_data
+  puts ops_manager_data['BaseUrl']
 end

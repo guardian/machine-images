@@ -22,6 +22,7 @@ require 'socket'
 
 require_relative 'locksmith/dynamo_db'
 require_relative 'mongodb/rs_config'
+require_relative 'mongodb/ops_manager'
 require_relative 'aws/helpers'
 require_relative 'util/logger'
 
@@ -86,77 +87,19 @@ def parse_options(args)
 end
 
 
-class MMS
-  include HTTParty
 
-  def initialize(mms_config)
-    @mms_config = mms_config
-    self.class.base_uri "#{@mms_config['BaseUrl']}/api/public/v1.0/groups/#{@mms_config['GroupId']}"
-    self.class.digest_auth @mms_config['AutomationApiUser'], @mms_config['AutomationApiKey']
-  end
-
-  def automation_status
-    self.class.get("/automationStatus")
-  end
-
-  def automation_config
-    self.class.get("/automationConfig")
-  end
-
-  def put_automation_config(new_config)
-    response = self.class.put(
-      "/automationConfig",
-      :body => new_config.to_json,
-      :headers => { 'Content-Type' => 'application/json'}
-    )
-    if response.code >= 400
-      raise FatalError, "API response code was #{response.code}: #{response.body}"
-    end
-    response
-  end
-
-  def hosts
-    self.class.get("/hosts")
-  end
-
-  def delete_hosts(id)
-    response = self.class.delete("/hosts/#{id}")
-    if response.code >= 400
-      raise FatalError, "API response code was #{response.code}: #{response.body}"
-    end
-    response
-  end
-
-  def automation_agents
-    self.class.get("/agents/AUTOMATION")
-  end
-
-  def wait_for_goal_state
-    logger.info 'Entering wait for goal state'
-    hosts_to_check = automation_agents['results'].map{ |e| e['hostname'] }
-    loop do
-      status = automation_status
-      goal = status['goalVersion']
-      last_goals = status['processes'].select{ |e| hosts_to_check.include?(e['hostname']) }.map{|e| e['lastGoalVersionAchieved']}
-      logger.info "Goal: #{goal} Last achieved: #{last_goals}"
-      break if last_goals.all? { |e| goal == e }
-      sleep 5
-    end
-    logger.info 'Successfully reached goal state'
-  end
-end
 
 def save_json(data, filename)
   File.write(filename, JSON.pretty_generate(data))
 end
 
-def set_version(mms, target)
+def set_version(ops_manager, target)
   # Change the version of mongo
-  config = mms.automation_config
+  config = ops_manager.automation_config
   processes = config['processes']
   processes.each { |e| e['version'] = target }
-  mms.put_automation_config(config)
-  mms.wait_for_goal_state
+  ops_manager.put_automation_config(config)
+  ops_manager.wait_for_goal_state
 end
 
 def find_replica_set(config, name)
@@ -167,13 +110,13 @@ def find_replica_set(config, name)
   rs
 end
 
-def clean_up_dead_nodes(mms, replica_set_name)
+def clean_up_dead_nodes(ops_manager, replica_set_name)
   # get the instances that we expect to be in the list
   mongo_nodes = get_identity_instances.map{|i| i.private_dns_name }
   logger.info "Known mongo nodes: #{mongo_nodes}"
 
-  # get current config from MMS
-  config = mms.automation_config
+  # get current config from OpsManager
+  config = ops_manager.automation_config
   save_json(config, 'cleanup-01.json')
 
   # find replica set
@@ -198,33 +141,33 @@ def clean_up_dead_nodes(mms, replica_set_name)
     }
     save_json(config, 'cleanup-02.json')
 
-    # push new config to MMS
-    mms.put_automation_config(config)
-    mms.wait_for_goal_state
+    # push new config to OpsManager
+    ops_manager.put_automation_config(config)
+    ops_manager.wait_for_goal_state
   end
 
   # find unknown hosts (from the processes we've just removed)
   unknown_process_hosts = rs_unknown_processes.map{|p| p['hostname']}
-  unknown_hosts = mms.hosts['results'].select{|h| unknown_process_hosts.include?(h['hostname'])}
+  unknown_hosts = ops_manager.hosts['results'].select{|h| unknown_process_hosts.include?(h['hostname'])}
 
   if unknown_hosts.length > 0
     logger.info "#{unknown_hosts.length}"
     logger.info "DELETE hosts: #{unknown_hosts.map{|h| h['hostname']}}"
     unknown_hosts.each{ |uh|
-      mms.delete_hosts(uh['id'])
+      ops_manager.delete_hosts(uh['id'])
     }
   end
 end
 
-def add_self(mms, replica_set_name)
-  # check we have an associated registered MMS agent
-  agents = mms.automation_agents
+def add_self(ops_manager, replica_set_name)
+  # check we have an associated registered OpsManager agent
+  agents = ops_manager.automation_agents
   this_host = agents['results'].find { |e| e['hostname'].include?(Socket.gethostname) }
   if this_host.nil?
     raise FatalError, 'This host does not have a registered automation agent'
   end
 
-  config = mms.automation_config
+  config = ops_manager.automation_config
   save_json(config, 'initial.json')
   processes = config['processes']
   this_process = processes.find { |e| e['hostname'] == this_host['hostname'] }
@@ -246,8 +189,8 @@ def add_self(mms, replica_set_name)
 
     logger.info "Adding #{this_host['hostname']} to config"
     save_json(config, 'modified.json')
-    mms.put_automation_config(config)
-    mms.wait_for_goal_state
+    ops_manager.put_automation_config(config)
+    ops_manager.wait_for_goal_state
   else
     logger.info 'This host is already in the processes list, no work to do'
   end
@@ -270,7 +213,7 @@ Util::SingletonLogger.instance.init_syslog(
     quiet_mode = options.quiet_mode
 )
 
-logger.info('MongoDB: Configure Replica Set Member in MMS.....')
+logger.info('MongoDB: Configure Replica Set Member in OpsManager.....')
 
 replica_set_config = MongoDB::ReplicaSetConfig.new
 
@@ -282,10 +225,10 @@ locksmith = Locksmith::DynamoDB.new(
 )
 
 locksmith.lock(replica_set_config.key) do
-  mms_config = replica_set_config.mms_data
-  mms = MMS.new(mms_config)
-  clean_up_dead_nodes(mms, replica_set_config.name)
-  add_self(mms, replica_set_config.name)
+  ops_manager_config = replica_set_config.ops_manager_data
+  ops_manager = OpsManager.new(ops_manager_config)
+  clean_up_dead_nodes(ops_manager, replica_set_config.name)
+  add_self(ops_manager, replica_set_config.name)
 end
 
-logger.info('MongoDB Configure Replica Set Member in MMS COMPLETE!')
+logger.info('MongoDB Configure Replica Set Member in OpsManager COMPLETE!')

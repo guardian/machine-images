@@ -36,10 +36,10 @@ replica_set_config = MongoDB::ReplicaSetConfig.new
 locksmith.lock(replica_set_config.key) do
   if options.configFilePath && options.templateFile
     # write out mongodb.conf
-    mms_data = replica_set_config.mms_data
-    @mmsGroupId = mms_data['GroupId']
-    @mmsApiKey = mms_data['ApiKey']
-    @mmsBaseUrl = mms_data['BaseUrl']
+    ops_manager_data = replica_set_config.ops_manager_data
+    @mmsGroupId = ops_manager_data['GroupId']
+    @mmsApiKey = ops_manager_data['ApiKey']
+    @mmsBaseUrl = ops_manager_data['BaseUrl']
     template = ERB.new(File.read(options.templateFile))
     File.write(options.configFilePath, template.result)
   end
