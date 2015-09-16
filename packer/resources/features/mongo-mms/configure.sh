@@ -19,5 +19,9 @@ ${SCRIPTPATH}/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/auto
 # Start agent
 start mongodb-mms-automation-agent
 
+# create mongodb logging location
+mkdir -p /var/log/mongodb
+chown mongodb:mongodb /var/log/mongodb
+
 # Run the replica set initialisation script
 ${SCRIPTPATH}/scripts/mongodb_add_self_to_replset_mms.rb
