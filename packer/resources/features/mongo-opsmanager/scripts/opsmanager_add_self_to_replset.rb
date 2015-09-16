@@ -33,16 +33,6 @@ SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
 class FatalError < StandardError
 end
 
-def get_tag(tag_name)
-  instance_tags ||= AwsHelper::InstanceData::get_custom_tags
-  instance_tags[tag_name]
-end
-
-def get_identity_instances
-  tags = AwsHelper::InstanceData::get_custom_tags
-  AwsHelper::EC2::get_instances(tags)
-end
-
 def logger
   Util::SingletonLogger.instance.logger
 end
@@ -85,124 +75,15 @@ def parse_options(args)
   options
 end
 
-def save_json(data, filename)
-  File.write(filename, JSON.pretty_generate(data))
+def get_tag(tag_name)
+  instance_tags ||= AwsHelper::InstanceData::get_custom_tags
+  instance_tags[tag_name]
 end
 
-def set_version(ops_manager, replica_set_name, target)
-  # Change the version of mongo
-  config = ops_manager.automation_config
-
-  # Get the process names for the named replica set
-  rs = find_replica_set(config, replica_set_name)
-  rs_process_names = rs['members'].map{|m| m['host']}
-
-  # Update the version
-  processes = config['processes']
-  processes.each { |p|
-    if rs_process_names.include?(p['name'])
-      logger.info "Updating process #{p['hostname']} to version #{target}"
-      p['version'] = target
-    end
-  }
-  ops_manager.put_automation_config(config)
-  ops_manager.wait_for_goal_state
+def get_identity_instances
+  tags = AwsHelper::InstanceData::get_custom_tags
+  AwsHelper::EC2::get_instances(tags)
 end
-
-def find_replica_set(config, name)
-  rs = config['replicaSets'].find{|rs| rs['_id'] == name}
-  if rs.nil?
-    raise FatalError, "Cannot find replica set #{name} in existing configuration"
-  end
-  rs
-end
-
-def clean_up_dead_nodes(ops_manager, replica_set_name)
-  # get the instances that we expect to be in the list
-  mongo_nodes = get_identity_instances.map{|i| i.private_dns_name }
-  logger.info "Known mongo nodes: #{mongo_nodes}"
-
-  # get current config from OpsManager
-  config = ops_manager.automation_config
-  save_json(config, 'cleanup-01.json')
-
-  # find replica set
-  rs = find_replica_set(config, replica_set_name)
-
-  # find all associated processes
-  rs_process_names = rs['members'].map{|m| m['host']}
-  rs_processes = config['processes'].select{|p| rs_process_names.include?(p['name'])}
-
-  # find unknown processes in the replica set (processes that we didn't find corresponding instances of)
-  rs_unknown_processes = rs_processes.reject{|p| mongo_nodes.include?(p['hostname']) }
-  rs_unknown_process_names = rs_unknown_processes.map{|p| p['name']}
-  logger.info "Unknown process names in replica set #{replica_set_name}: #{rs_unknown_process_names}"
-
-  unless rs_unknown_processes.empty?
-    # remove related process
-    config['processes'].reject!{|p| rs_unknown_processes.include?(p)}
-
-    # remove related replicaSet members
-    rs['members'].reject! { |m|
-      rs_unknown_process_names.include?(m['host'])
-    }
-    save_json(config, 'cleanup-02.json')
-
-    # push new config to OpsManager
-    ops_manager.put_automation_config(config)
-    ops_manager.wait_for_goal_state
-  end
-
-  # find unknown hosts (from the processes we've just removed)
-  unknown_process_hosts = rs_unknown_processes.map{|p| p['hostname']}
-  unknown_hosts = ops_manager.hosts['results'].select{|h| unknown_process_hosts.include?(h['hostname'])}
-
-  if unknown_hosts.length > 0
-    logger.info "#{unknown_hosts.length}"
-    logger.info "DELETE hosts: #{unknown_hosts.map{|h| h['hostname']}}"
-    unknown_hosts.each{ |uh|
-      ops_manager.delete_hosts(uh['id'])
-    }
-  end
-end
-
-def add_self(ops_manager, replica_set_name)
-  # check we have an associated registered OpsManager agent
-  agents = ops_manager.automation_agents
-  this_host = agents['results'].find { |e| e['hostname'].include?(Socket.gethostname) }
-  if this_host.nil?
-    raise FatalError, 'This host does not have a registered automation agent'
-  end
-
-  config = ops_manager.automation_config
-  save_json(config, 'initial.json')
-  processes = config['processes']
-  this_process = processes.find { |e| e['hostname'] == this_host['hostname'] }
-
-  rs = find_replica_set(config, replica_set_name)
-
-  if this_process.nil?
-    new_node = processes[0].clone
-    new_node['hostname'] = this_host['hostname']
-    new_node['alias'] = IPSocket.getaddress(Socket.gethostname)
-    new_node['name'] = Socket.gethostname
-    processes << new_node
-
-    replica_set_members = rs['members']
-    new_member = replica_set_members[0].clone
-    new_member['host'] = new_node['name']
-    new_member['_id'] = replica_set_members.map{|e| e['_id']}.max + 1
-    replica_set_members << new_member
-
-    logger.info "Adding #{this_host['hostname']} to config"
-    save_json(config, 'modified.json')
-    ops_manager.put_automation_config(config)
-    ops_manager.wait_for_goal_state
-  else
-    logger.info 'This host is already in the processes list, no work to do'
-  end
-end
-
 
 ## main
 exit if __FILE__ != $0
@@ -233,9 +114,13 @@ locksmith = Locksmith::DynamoDB.new(
 
 locksmith.lock(replica_set_config.key) do
   ops_manager_config = replica_set_config.ops_manager_data
-  ops_manager = OpsManager.new(ops_manager_config)
-  clean_up_dead_nodes(ops_manager, replica_set_config.name)
-  add_self(ops_manager, replica_set_config.name)
+  ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(ops_manager_config))
+
+  known_hosts = get_identity_instances.map{|i| i.private_dns_name }
+  logger.info "Known mongo nodes: #{known_hosts}"
+
+  ops_manager.clean_up_dead_nodes(replica_set_config.name, known_hosts)
+  ops_manager.add_self(replica_set_config.name)
 end
 
-logger.info('MongoDB Configure Replica Set Member in OpsManager COMPLETE!')
+logger.info('MongoDB: Configure Replica Set Member in OpsManager COMPLETE!')
