@@ -36,6 +36,7 @@ EOM
 /usr/share/elasticsearch/bin/plugin --install lukas-vlcek/bigdesk
 /usr/share/elasticsearch/bin/plugin --install karmi/elasticsearch-paramedic
 /usr/share/elasticsearch/bin/plugin --install royrusso/elasticsearch-HQ
+/usr/share/elasticsearch/bin/plugin --install com.gu/elasticsearch-cloudwatch/1.1
 
 ## Install the curator
 pip install elasticsearch-curator
