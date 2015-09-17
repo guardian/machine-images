@@ -50,8 +50,8 @@ module MongoDB
 
     def wait_for_goal_state
       logger.info 'Entering wait for goal state'
-      hosts_to_check = automation_agents['results'].map{ |e| e['hostname'] }
       loop do
+        hosts_to_check = automation_agents['results'].map{ |e| e['hostname'] }
         status = automation_status
         goal = status['goalVersion']
         last_goals = status['processes'].select{ |e| hosts_to_check.include?(e['hostname']) }.map{|e| e['lastGoalVersionAchieved']}
