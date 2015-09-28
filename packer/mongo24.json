@@ -73,7 +73,7 @@
     {
       "type": "shell",
       "inline": [
-        "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo-opsmanager/install.sh"
+        "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo-opsmanager/agent-install.sh"
       ],
       "only": ["mongo-mms"]
     }
