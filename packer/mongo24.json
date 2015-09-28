@@ -1,0 +1,81 @@
+{
+  "variables": {
+    "build_number": "DEV",
+    "build_name": null,
+    "build_vcs_ref": "",
+    "account_numbers": "",
+    "build_branch": "DEV",
+    "euw1_source_ami": "ami-9d2f0fea"
+  },
+  "builders": [
+    {
+      "name": "mongo24",
+      "type": "amazon-ebs",
+      "region": "eu-west-1",
+      "source_ami": "{{user `euw1_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
+      "ami_name": "mongo24_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+      "ami_description": "AMI for mongo24 built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
+      "ami_users": "{{user `account_numbers`}}",
+      "tags": {
+        "Name": "mongo24_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "BuildName": "{{user `build_name`}}",
+        "Build":"{{user `build_number`}}",
+        "Branch":"{{user `build_branch`}}",
+        "VCSRef":"{{user `build_vcs_ref`}}",
+        "SourceAMI":"{{user `euw1_source_ami`}}"
+      }
+    },
+    {
+      "name": "mongo-mms",
+      "type": "amazon-ebs",
+      "region": "eu-west-1",
+      "source_ami": "{{user `euw1_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
+      "ami_name": "mongo-mms_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+      "ami_description": "AMI for mongo-mms built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
+      "ami_users": "{{user `account_numbers`}}",
+      "tags": {
+        "Name": "mongo-mms_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "BuildName": "{{user `build_name`}}",
+        "Build":"{{user `build_number`}}",
+        "Branch":"{{user `build_branch`}}",
+        "VCSRef":"{{user `build_vcs_ref`}}",
+        "SourceAMI":"{{user `euw1_source_ami`}}"
+      }
+    }
+  ],
+
+  "provisioners" : [
+    {
+      "type": "file",
+      "source": "resources/features",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "script": "resources/ubuntu-trusty.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "/usr/bin/sudo -E /bin/bash -x /opt/features/gnm-dns/install.sh",
+        "/bin/sleep 2",
+        "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo24/install.sh"
+      ],
+      "only": ["mongo24"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo-opsmanager/install.sh"
+      ],
+      "only": ["mongo-mms"]
+    }
+  ]
+}

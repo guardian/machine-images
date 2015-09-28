@@ -1,0 +1,19 @@
+# mongo.conf.erb
+#
+
+# Location of the database files.
+dbpath = /var/lib/mongodb
+
+# fork and run in background
+fork = false
+
+# Full filename path to where log messages will be written.
+logpath = /var/log/mongodb/mongodb.log
+logappend = true
+
+# Replica set configuration
+replSet = <%= @replica_set_name %>
+
+# Authentication
+auth = true
+keyFile = /var/lib/mongodb/keyFile

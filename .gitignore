@@ -1,2 +1,3 @@
 ec2_*.pem
 packer_bin/
+.idea/
