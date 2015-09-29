@@ -7,8 +7,10 @@ SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 7F0CEB10
 echo "deb http://repo.mongodb.org/apt/ubuntu trusty/mongodb-org/3.0 multiverse" | sudo tee /etc/apt/sources.list.d/mongodb-org-3.0.list
 apt-get update
-apt-get install -y mongodb-org ruby
-# ruby-dev sysfsutils
+apt-get install -y mongodb-org ruby ruby-dev sysfsutils
+
+echo "Installing Ruby gems for helper scripts"
+gem install aws-sdk -v '~> 2'
 
 # disable default mongod
 service mongod stop
@@ -23,5 +25,3 @@ curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms_1.8.1.290-1_x8
 dpkg --install /tmp/mongo-mms.deb
 curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms-backup-daemon_1.8.1.290-1_x86_64.deb -o /tmp/mongo-mms-backup-daemon.deb
 dpkg --install /tmp/mongo-mms-backup-daemon.deb
-
-  
