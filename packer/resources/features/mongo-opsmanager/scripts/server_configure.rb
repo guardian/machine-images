@@ -26,7 +26,7 @@ OptionParser.new do |opts|
   end
 end.parse!
 
-def setup_mongod(name, port)
+def setup_mongod(options, name, port)
   @name = name
   @port = port
   upstart_template = ERB.new(File.read(options.upstart_template_file))
@@ -51,9 +51,9 @@ config = MongoDB::OpsManagerConfig.new
 locksmith.lock(config.key) do
   data = config.ops_manager_data
   if options.upstart_template_file && options.mongo_config_template_file
-    setup_mongod('application', 27017)
-    setup_mongod('blockstore', 27018)
+    setup_mongod(options, 'application', 27017)
+    setup_mongod(options, 'blockstore', 27018)
   end
-  gen_key = Base64.decode(data['GenKey'])
+  gen_key = Base64.decode64(data['GenKey'])
   File.write("#{options.etcDir}/mongodb-mms/gen.key", gen_key)
 end
