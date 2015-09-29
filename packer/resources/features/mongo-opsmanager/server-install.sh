@@ -15,7 +15,7 @@ service mongod stop
 echo "manual" > /etc/init/mongod.override
 
 # install script to disable transparent huge pages
-install -m 755 ${SCRIPTPATH} /etc/init.d/disable-transparent-hugepages
+install -m 755 ${SCRIPTPATH}/disable-transparent-hugepages /etc/init.d/disable-transparent-hugepages
 update-rc.d disable-transparent-hugepages defaults
 
 # install OpsManager MMS and backup daemon
