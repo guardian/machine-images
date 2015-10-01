@@ -18,10 +18,6 @@ echo "Installing helper script dependencies"
 apt-get install -y ruby ruby-dev sysfsutils
 gem install aws-sdk -v '~> 2'
 
-# disable default mongod
-service mongod stop
-echo "manual" > /etc/init/mongod.override
-
 # install script to disable transparent huge pages
 install -m 755 ${SCRIPTPATH}/templates/disable-transparent-hugepages /etc/init.d/disable-transparent-hugepages
 update-rc.d disable-transparent-hugepages defaults
