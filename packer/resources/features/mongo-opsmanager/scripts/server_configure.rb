@@ -43,7 +43,7 @@ def setup_mms(options, data)
   @backup_central_url = data['BackupCentralUrl']
   @email_address = data['EmailAddress']
 
-  known_hosts = get_identity_instances.map{|i| i.private_dns_name }
+  known_hosts = get_identity_instances.map{|i| i.private_dns_name }.reject{|h| h.nil? || h.empty? }
   mms_mongo_nodes = known_hosts.map{|h| "#{h}:27017"}
   @mongo_uri = "mongodb://#{mms_mongo_nodes.join(',')}"
 
@@ -71,6 +71,6 @@ locksmith.lock(config.key) do
   setup_mongod(options, 'application', 27017)
   setup_mongod(options, 'blockstore', 27018)
   gen_key = Base64.decode64(data['GenKey'])
-  File.write("#{options.etcDir}/mongodb-mms/gen.key", gen_key)
+  File.write("#{options.ch_root}/etc/mongodb-mms/gen.key", gen_key)
   setup_mms(options, data)
 end
