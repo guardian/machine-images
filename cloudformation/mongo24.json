@@ -16,6 +16,10 @@
         "PROD"
       ]
     },
+    "Application": {
+      "Description": "Application name",
+      "Type": "String"
+    },
     "VpcId": {
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
       "Type": "AWS::EC2::VPC::Id"
@@ -171,7 +175,18 @@
                 "s3:GetObject"
               ],
               "Resource": [
-                "arn:aws:s3:::guconf-flexible/*"
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::guconf-",
+                      {
+                        "Ref": "Application"
+                      },
+                      "/*"
+                    ]
+                  ]
+                }
               ]
             }
           ]
