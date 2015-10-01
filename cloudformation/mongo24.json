@@ -151,7 +151,18 @@
                 "s3:GetObject"
               ],
               "Resource": [
-                "arn:aws:s3:::composer-dist/*"
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:s3:::",
+                      {
+                        "Ref": "Application"
+                      },
+                      "-dist/*"
+                    ]
+                  ]
+                }
               ]
             }
           ]
