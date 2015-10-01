@@ -14,7 +14,7 @@ dpkg -i ${PACKAGE}
 popd
 
 CONFIG_FILE="/etc/mongodb-mms/automation-agent.config"
-${SCRIPTPATH}/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/automation-agent.config.erb
+${SCRIPTPATH}/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/templates/automation-agent.config.erb
 
 # Start agent
 start mongodb-mms-automation-agent
