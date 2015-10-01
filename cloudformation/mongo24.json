@@ -20,6 +20,10 @@
       "Description": "Application name",
       "Type": "String"
     },
+    "Stack": {
+      "Description": "Stack name",
+      "Type": "String"
+    },
     "VpcId": {
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
       "Type": "AWS::EC2::VPC::Id"
@@ -48,7 +52,17 @@
     "DynamoMongoConfiguration": {
       "Description": "The dynamodb table to use for mongo configuration",
       "Type": "AWS::DynamoDB::Table"
+    },
+    "GetDistributablesPolicyS3": {
+      "Description": "The s3 bucket to use for distributables policy",
+      "Type": "AWS::S3::Bucket"
+    },
+    "GetConfigPolicyS3": {
+      "Description": "The s3 bucket to use for config policy",
+      "Type": "AWS::S3::Bucket"
     }
+
+
 
   },
   "Resources": {
@@ -159,20 +173,8 @@
               "Action": [
                 "s3:GetObject"
               ],
-              "Resource": [
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:aws:s3:::",
-                      {
-                        "Ref": "Application"
-                      },
-                      "-dist/*"
-                    ]
-                  ]
-                }
-              ]
+              "Resource":
+                { "Ref": "GetDistributablesPolicyS3" }
             }
           ]
         },
@@ -195,18 +197,7 @@
                 "s3:GetObject"
               ],
               "Resource": [
-                {
-                  "Fn::Join": [
-                    "",
-                    [
-                      "arn:aws:s3:::guconf-",
-                      {
-                        "Ref": "Application"
-                      },
-                      "/*"
-                    ]
-                  ]
-                }
+                { "Ref": "GetConfigPolicyS3" }
               ]
             }
           ]
@@ -358,7 +349,9 @@
           },
           {
             "Key": "Stack",
-            "Value": "flexible",
+            "Value": {
+              "Ref": "Stack"
+            },
             "PropagateAtLaunch": "true"
           },
           {
