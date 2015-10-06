@@ -3,11 +3,6 @@
 # This script must be run as root
 set -e
 
-# Make sure dnsmasq is installed
-if ! (dpkg -s dnsmasq 2> /dev/null > /dev/null); then
-    apt-get install -y dnsmasq
-fi
-
 # Generate the config file
 PROXIES=( "10.252.63.100" "10.253.63.100" )
 DOMAINS=( "guprod.gnl" "dc1.gnm" "dc2.gnm" "dmz.gnl" "gws.gutools.co.uk" \

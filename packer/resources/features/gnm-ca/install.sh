@@ -6,11 +6,6 @@ set -e
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 
-# Make sure ca-certificates-java is installed
-if ! (dpkg -s ca-certificates-java 2> /dev/null > /dev/null); then
-    sudo apt-get install -y ca-certificates-java
-fi
-
 mkdir -p /usr/local/share/ca-certificates/GNM
 cp ${SCRIPTPATH}/*.crt /usr/local/share/ca-certificates/GNM
 
