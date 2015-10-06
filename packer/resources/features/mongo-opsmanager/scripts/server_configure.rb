@@ -39,9 +39,10 @@ def setup_mongod(options, name, port)
 end
 
 def setup_mms(options, data)
-  @central_url = data['CentralUrl']
-  @backup_central_url = data['BackupCentralUrl']
-  @email_address = data['EmailAddress']
+  @data = data
+  # ['CentralUrl']
+  # @backup_central_url = data['BackupCentralUrl']
+  # @email_address = data['EmailAddress']
 
   known_hosts = get_identity_instances.map{|i| i.private_dns_name }.reject{|h| h.nil? || h.empty? }
   mms_mongo_nodes = known_hosts.map{|h| "#{h}:27017"}

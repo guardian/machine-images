@@ -14,14 +14,14 @@
 # property in <install_dir>/conf/mms.conf. Default port is 8080.
 # REQUIRED
 # E.g., http://mms.acmewidgets.com:8080
-mms.centralUrl=<%= @central_url %>
+mms.centralUrl=<%= @data['CentralUrl'] %>
 
 # Note that changing the server's backup port requires updating both the mms.backupCentralUrl
 # here as well as the BACKUP_BASE_PORT property in <install_dir>/conf/mms.conf. Default
 # port is 8081.
 # Required only if using Backup
 # E.g., http://mms.acmewidgets.com:8081
-mms.backupCentralUrl=<%= @backup_central_url %>
+mms.backupCentralUrl=<%= @data['BackupCentralUrl'] %>
 
 # Run the MMS Application Server over HTTPS.
 # A PEM file containing the server's certificate and private key is needed. If the PEM
@@ -40,20 +40,20 @@ mms.https.PEMKeyFilePassword=
 # Email/Reply accounts for emails.
 # REQUIRED
 # E.g., noreply@acmewidgets.com
-mms.fromEmailAddr=<%= @email_address %>
-mms.replyToEmailAddr=<%= @email_address %>
+mms.fromEmailAddr=<%= @data['EmailAddress'] %>
+mms.replyToEmailAddr=<%= @data['EmailAddress'] %>
 
 # Used for both sending and receiving internal system notifications
 # REQUIRED
 # E.g., admin-noreply@acmewidgets.com
-mms.adminFromEmailAddr=<%= @email_address %>
-mms.adminEmailAddr=<%= @email_address %>
+mms.adminFromEmailAddr=<%= @data['EmailAddress'] %>
+mms.adminEmailAddr=<%= @data['EmailAddress'] %>
 
 # AWS Simple Email Service only --
 # The email address to which bounce notifications are to be forwarded.
 # REQUIRED
 # E.g., bounce@acmewidgets.com
-mms.bounceEmailAddr=<%= @email_address %>
+mms.bounceEmailAddr=<%= @data['EmailAddress'] %>
 
 # Email authentication options:
 # Options are:
@@ -177,8 +177,8 @@ increment.offer.time=120000
 # #####################################
 # AWS key credentials (required if using Simple Email Service support. See Email authentication options above.)
 
-aws.accesskey=
-aws.secretkey=
+aws.accesskey=<%= @data['SesAccessKey'] %>
+aws.secretkey=<%= @data['SesSecretAccessKey'] %>
 
 # #####################################
 # reCaptcha (optional reCaptcha validation during new user registration)
