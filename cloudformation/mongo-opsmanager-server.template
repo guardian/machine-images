@@ -231,7 +231,7 @@
           },
           {
             "IpProtocol": "tcp",
-            "FromPort": "8081",
+            "FromPort": "8080",
             "ToPort": "8081",
             "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroup" }
           }
@@ -276,7 +276,7 @@
           }
         ],
         "HealthCheck": {
-          "Target": "HTTP:8080/",
+          "Target": "HTTP:8080/user/login",
           "Timeout": "5",
           "Interval": "10",
           "UnhealthyThreshold": "5",
@@ -315,7 +315,7 @@
         "SecurityGroupEgress": [
           {
             "IpProtocol": "tcp",
-            "FromPort": "8081",
+            "FromPort": "8080",
             "ToPort": "8081",
             "CidrIp": "0.0.0.0/0"
           }
@@ -335,7 +335,7 @@
           }
         ],
         "HealthCheck": {
-          "Target": "HTTP:8081/",
+          "Target": "HTTP:8080/user/login",
           "Timeout": "10",
           "Interval": "20",
           "UnhealthyThreshold": "10",
@@ -367,6 +367,7 @@
         "Cooldown": "180",
         "HealthCheckType": "EC2",
         "HealthCheckGracePeriod": 1800,
+        "LoadBalancerNames": [ { "Ref": "MMSLoadBalancer" }, { "Ref": "BackupLoadBalancer" } ],
         "Tags": [
           {
             "Key": "Stage",
