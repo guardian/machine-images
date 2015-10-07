@@ -23,3 +23,19 @@ service mongodb restart
 
 # Run the replica set initialisation script
 ${SCRIPTPATH}/scripts/mongodb_add_self_to_replset.rb
+
+# Download and install the automation agent
+OM_URL=$( ${SCRIPTPATH}/../mongo-opsmanager/scripts/opsmanager_url.rb )
+
+# Download and install automation agent
+PACKAGE=mongodb-mms-automation-agent-manager_2.0.12.1296-1_amd64.deb
+pushd /tmp
+curl -OL ${OM_URL}/download/agent/automation/${PACKAGE}
+dpkg -i ${PACKAGE}
+popd
+
+CONFIG_FILE="/etc/mongodb-mms/automation-agent.config"
+${SCRIPTPATH}/../mongo-opsmanager/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/templates/automation-agent.config.erb
+
+# Start agent
+start mongodb-mms-automation-agent
