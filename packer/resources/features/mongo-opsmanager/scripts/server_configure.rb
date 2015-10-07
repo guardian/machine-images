@@ -48,6 +48,9 @@ def setup_mms(options, data)
   mms_mongo_nodes = known_hosts.map{|h| "#{h}:27017"}
   @mongo_uri = "mongodb://#{mms_mongo_nodes.join(',')}"
 
+  STDERR.puts "Updating mongo URI to #{@mongo_uri}"
+  STDERR.puts 'NOTE: Remember to update the blockstore configuration within OpsManager'
+
   mms_template = ERB.new(File.read("#{options.template_dir}/conf-mms.properties.erb"))
   File.write("#{options.ch_root}/opt/mongodb/mms/conf/conf-mms.properties", mms_template.result)
 
