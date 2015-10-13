@@ -25,7 +25,7 @@
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",
         "VCSRef":"{{user `build_vcs_ref`}}",
-        "SourceAMI":"{{user `euw1_source_ami`}}"
+        "SourceAMI":"{{user `euw1_vivid_source_ami`}}"
       }
     }
   ],
