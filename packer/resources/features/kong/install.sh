@@ -6,7 +6,8 @@
 set -e
 
 echo "Installing Kong's dependencies"
-apt-get -y install netcat lua5.1 openssl libpcre3 dnsmasq
+# jq is not a dependency of Kong but it's useful when looking up Cassandra nodes at startup
+apt-get -y install netcat lua5.1 openssl libpcre3 dnsmasq jq
 
 echo "Waiting 10 seconds to settle down after installing dnsmasq"
 sleep 10
