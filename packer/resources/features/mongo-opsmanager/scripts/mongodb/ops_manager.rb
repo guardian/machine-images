@@ -173,6 +173,16 @@ module MongoDB
         new_member['_id'] = replica_set_members.map{|e| e['_id']}.max + 1
         replica_set_members << new_member
 
+        # check that we are set up for monitoring
+        monitoring_versions = config['monitoringVersions']
+        this_monitor_version = monitoring_versions.find { |e| e['hostname'] == this_host['hostname']}
+
+        if this_monitor_version.nil?
+          new_mv = monitoring_versions[0].clone
+          new_mv['hostname'] = this_host['hostname']
+          monitoring_versions << new_mv
+        end
+
         logger.info "Adding #{this_host['hostname']} to config"
         save_json(config, 'modified.json')
         @api.put_automation_config(config)
@@ -180,6 +190,7 @@ module MongoDB
       else
         logger.info 'This host is already in the processes list, no work to do'
       end
+
     end
   end
 end
