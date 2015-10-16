@@ -48,6 +48,11 @@
     },
     {
       "type": "shell",
+      "script": "resources/bump-ulimit.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    },
+    {
+      "type": "shell",
       "inline": [
         "/usr/bin/sudo -E /bin/bash -x /opt/features/kong/install.sh"
       ]
