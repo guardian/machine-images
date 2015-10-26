@@ -22,7 +22,7 @@ ${SCRIPTPATH}/scripts/mongodb_configure.rb -k ${KEY_FILE} -c ${CONFIG_FILE} -t $
 service mongodb restart
 
 # Run the replica set initialisation script
-${SCRIPTPATH}/scripts/mongodb_add_self_to_replset.rb
+${SCRIPTPATH}/scripts/mongodb_add_self_to_replset.rb "$@"
 
 # Download and install the automation agent
 OM_URL=$( ${SCRIPTPATH}/../mongo-opsmanager/scripts/opsmanager_url.rb )
