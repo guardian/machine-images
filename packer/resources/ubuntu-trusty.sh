@@ -19,8 +19,9 @@ add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ trusty-u
 # sometimes apt-get update doesn't see the changes here, try sleeping for a moment
 sleep 1
 
-new_section "Updating package lists"
+new_section "Updating packages"
 apt-get update
+apt-get --yes upgrade
 
 ## Install packages
 new_section "Installing required packages"
