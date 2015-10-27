@@ -62,7 +62,7 @@ new_section "Configuring enhanced networking (ixgbevf)"
 /opt/features/ixgbevf/install.sh
 
 ## Ensure we don't swap unnecessarily
-echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit
+echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit.conf
 
 new_section "Configuring locale"
 locale-gen en_GB.UTF-8

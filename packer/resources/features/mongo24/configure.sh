@@ -4,6 +4,9 @@ set -e
 # Script to configure a mongo node
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 
+# Run set-readahead for new volumes since boot
+service set-readahead start
+
 # Install the config file to /etc/mongodb.conf
 CONFIG_FILE=/etc/mongodb.conf
 cp ${CONFIG_FILE} ${CONFIG_FILE}.original
