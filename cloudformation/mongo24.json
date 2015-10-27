@@ -36,6 +36,20 @@
     "CustomerMasterKey": {
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
+    },
+    "InstanceType": {
+      "Description": "The instance type for the database nodes (typically smaller for prePROD)",
+      "Type": "String",
+      "AllowedValues": [
+        "m4.large",
+        "m4.xlarge",
+        "r3.xlarge"
+      ]
+    },
+    "MemberVisibilityMask": {
+      "Description": "The visibility mask controls which mongo members are visible (instead of hidden). This defaults to 'abc' which means that instances in availability zones a, b and c will be visible. Set to empty string for hidden members",
+      "Type": "String",
+      "Default": "abc"
     }
   },
   "Resources": {
@@ -361,18 +375,18 @@
             "Ref": "ReplicationSecurityGroup"
           }
         ],
-        "InstanceType": "m4.large",
+        "InstanceType": { "Ref": "InstanceType" },
         "IamInstanceProfile": {
           "Ref": "ServerInstanceProfile"
         },
         "UserData": {
           "Fn::Base64": {
             "Fn::Join": [
-              "\n",
+              "",
               [
-                "#!/bin/bash -ev",
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -u mongodb -x -k ", { "Ref": "CustomerMasterKey" }] ] },
-                "/opt/features/mongo24/configure.sh"
+                "#!/bin/bash -ev\n",
+                "/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -u mongodb -x -t io1 -k ", { "Ref": "CustomerMasterKey" }, "\n",
+                "/opt/features/mongo24/configure.sh --zone_visibility_mask '", { "Ref": "MemberVisibilityMask" } ,"'\n"
               ]
             ]
           }

@@ -32,6 +32,8 @@ function HELP {
 
     -t type       [optional] Specify a volume type.
 
+    -o options    [optional] Specify file system options (defaults to "defaults")
+
     -h            Displays this help message. No further functions are
                   performed.
 
@@ -40,9 +42,10 @@ exit 1
 }
 
 DELETE_ON_TERMINATION="false"
+OPTIONS="defaults"
 
 # Process options
-while getopts d:m:u:s:k:t:xh FLAG; do
+while getopts d:m:u:s:k:t:xo:h FLAG; do
   case $FLAG in
     d)
       DEVICE_LETTER=$OPTARG
@@ -64,6 +67,9 @@ while getopts d:m:u:s:k:t:xh FLAG; do
       ;;
     x)
       DELETE_ON_TERMINATION="true"
+      ;;
+    o)
+      OPTIONS=$OPTARG
       ;;
     h)  #show help
       HELP
@@ -207,7 +213,8 @@ wait_for_device ${UBUNTU_DEVICE}
 if [ -n "${MOUNTPOINT}" ]; then
   mkdir -p ${MOUNTPOINT}
   mkfs -t ext4 ${UBUNTU_DEVICE}
-  mount ${UBUNTU_DEVICE} ${MOUNTPOINT}
+  echo "${UBUNTU_DEVICE} ${MOUNTPOINT} ext4 ${OPTIONS} 0 0" >> /etc/fstab
+  mount ${MOUNTPOINT}
   if [ -n "${MOUNT_USER}" ]; then
     chown ${MOUNT_USER} ${MOUNTPOINT}
   fi

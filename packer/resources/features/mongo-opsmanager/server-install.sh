@@ -22,6 +22,12 @@ gem install aws-sdk -v '~> 2'
 install -m 755 ${SCRIPTPATH}/templates/disable-transparent-hugepages /etc/init.d/disable-transparent-hugepages
 update-rc.d disable-transparent-hugepages defaults
 
+# install script to set readahead
+install -m 755 ${SCRIPTPATH}/templates/set-readahead /etc/init.d/set-readahead
+update-rc.d set-readahead defaults
+
+echo "net.ipv4.tcp_keepalive_time = 300" > /etc/sysctl.d/71-tcp-keepalive
+
 # install OpsManager MMS and backup daemon
 curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms_1.8.1.290-1_x86_64.deb -o /tmp/mongo-mms.deb
 dpkg --install /tmp/mongo-mms.deb
