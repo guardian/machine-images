@@ -37,6 +37,11 @@
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
     },
+    "IOPS": {
+      "Description": "IOPS to provision",
+      "Type": "Number",
+      "Default": "200"
+    },
     "InstanceType": {
       "Description": "The instance type for the database nodes (typically smaller for prePROD)",
       "Type": "String",
@@ -385,7 +390,7 @@
               "",
               [
                 "#!/bin/bash -ev\n",
-                "/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -u mongodb -x -t io1 -k ", { "Ref": "CustomerMasterKey" }, "\n",
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -u mongodb -x -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] }, "\n",
                 "/opt/features/mongo24/configure.sh --zone_visibility_mask '", { "Ref": "MemberVisibilityMask" } ,"'\n"
               ]
             ]
