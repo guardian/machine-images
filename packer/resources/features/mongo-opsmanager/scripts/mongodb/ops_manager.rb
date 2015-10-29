@@ -192,5 +192,32 @@ module MongoDB
       end
 
     end
+
+    def self_install_backup
+      # check we have an associated registered OpsManager agent
+      agents = @api.automation_agents
+      this_host = agents['results'].find { |e| e['hostname'].include?(Socket.gethostname) }
+      if this_host.nil?
+        raise FatalError, 'This host does not have a registered automation agent'
+      end
+
+      config = @api.automation_config
+      save_json(config, 'initial.json')
+
+      backup_versions = config['backupVersions']
+      this_backup_version = backup_versions.find { |e| e['hostname'] == this_host['hostname']}
+
+      if this_backup_version.nil?
+        new_bv = { 'hostname' => this_host['hostname'] }
+        backup_versions << new_bv
+        logger.info "Adding backup agent to #{this_host['hostname']}"
+        save_json(config, 'modified.json')
+        @api.put_automation_config(config)
+        @api.wait_for_goal_state
+      else
+        logger.info 'This host already has the backup agent, no work to do'
+      end
+
+    end
   end
 end
