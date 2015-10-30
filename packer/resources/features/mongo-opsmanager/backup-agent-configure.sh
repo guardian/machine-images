@@ -7,7 +7,7 @@ SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 # Run set-readahead for new volumes since boot
 service set-readahead start
 
-OM_URL=$( ${SCRIPTPATH}/scripts/opsmanager_url.rb )
+OM_URL=$( ${SCRIPTPATH}/scripts/opsmanager_url.rb -a db)
 
 # Download and install automation agent
 PACKAGE=mongodb-mms-automation-agent-manager_2.0.12.1296-1_amd64.deb
@@ -17,7 +17,7 @@ dpkg -i ${PACKAGE}
 popd
 
 CONFIG_FILE="/etc/mongodb-mms/automation-agent.config"
-${SCRIPTPATH}/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/templates/automation-agent.config.erb
+${SCRIPTPATH}/scripts/agent_configure.rb -c ${CONFIG_FILE} -t ${SCRIPTPATH}/templates/automation-agent.config.erb -a db
 
 # Start agent
 start mongodb-mms-automation-agent

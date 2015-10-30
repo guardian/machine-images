@@ -19,6 +19,10 @@ OptionParser.new do |opts|
   opts.on('-t', '--template TEMPLATE', 'Path to config file template') do |templateFile|
     options.templateFile = templateFile
   end
+
+  opts.on('-a', '--app [app]', 'App of the database') do |app|
+    options.app = app
+  end
 end.parse!
 
 Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
@@ -31,7 +35,13 @@ locksmith = Locksmith::DynamoDB.new(
   ttl = 3600
 )
 
-replica_set_config = MongoDB::ReplicaSetConfig.new
+if options.app
+  tags = AwsHelper::InstanceData::get_tags
+  rs_key = [tags['Stack'], options.app, tags['Stage']].join('-')
+  replica_set_config = MongoDB::ReplicaSetConfig.new(nil, rs_key)
+else
+  replica_set_config = MongoDB::ReplicaSetConfig.new
+end
 
 locksmith.lock(replica_set_config.key) do
   if options.configFilePath && options.templateFile

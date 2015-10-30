@@ -110,7 +110,7 @@ logger.info('MongoDB: Configure OpsManager backup agent.....')
 tags = AwsHelper::InstanceData::get_tags
 rs_key = [tags['Stack'], options.app, tags['Stage']].join('-')
 
-replica_set_config = MongoDB::ReplicaSetConfig.new(rs_key)
+replica_set_config = MongoDB::ReplicaSetConfig.new(nil, rs_key)
 
 locksmith = Locksmith::DynamoDB.new(
     lock_table_name = 'mongo-initialisation',
