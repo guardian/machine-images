@@ -122,7 +122,6 @@ locksmith = Locksmith::DynamoDB.new(
 locksmith.lock(replica_set_config.key) do
   ops_manager_config = replica_set_config.ops_manager_data
   ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(ops_manager_config))
-
   ops_manager.self_install_backup
 end
 

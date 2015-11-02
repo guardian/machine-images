@@ -178,8 +178,7 @@ module MongoDB
         this_monitor_version = monitoring_versions.find { |e| e['hostname'] == this_host['hostname']}
 
         if this_monitor_version.nil?
-          new_mv = monitoring_versions[0].clone
-          new_mv['hostname'] = this_host['hostname']
+          new_mv =  = { 'hostname' => this_host['hostname'] }
           monitoring_versions << new_mv
         end
 
