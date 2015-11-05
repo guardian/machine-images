@@ -24,3 +24,10 @@ start mongodb-mms-automation-agent
 
 # Install backup agent
 ${SCRIPTPATH}/scripts/opsmanager_install_backup_agent.rb -a db
+
+# Make backup user
+if ! getent passwd backup >/dev/null; then
+  /usr/sbin/useradd -M -r --shell /sbin/nologin backup
+fi
+chown backup /backup
+touch /tmp/last_snapshot_downloaded.txt
