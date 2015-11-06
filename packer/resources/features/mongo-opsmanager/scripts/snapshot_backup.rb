@@ -130,7 +130,7 @@ def download_import_team_keys
   logger.info("Downloading document #{keyring_document_key} from bucket #{@options.keys_bucket}")
   s3 = Aws::S3::Client.new
   s3.get_object({bucket: @options.keys_bucket, key: keyring_document_key}, target: '/tmp/flexbackupkeys.gpg')
-  `gpg --import /tmp/flexbackupkeys.gpg`
+  `gpg --home-dir /home/backup/ --import /tmp/flexbackupkeys.gpg`
 end
 
 def generate_gpg_command(filename)
@@ -138,7 +138,7 @@ def generate_gpg_command(filename)
   key_uid_list = keys.split('\n')
   emails = key_uid_list.map{|uid| uid.split('<')[1].tr('>', '').tr("\n", '')}
   emails_as_args = emails.map{|email| "-r #{email}"}.join(' ')
-  encrypt_command =  "gpg -e #{emails_as_args} --trust-model always -o /backup/#{filename}.gpg"
+  encrypt_command =  "gpg --home-dir /home/backup/ -e #{emails_as_args} --trust-model always -o /backup/#{filename}.gpg"
   logger.info("GPG command: #{encrypt_command}")
   encrypt_command
 end

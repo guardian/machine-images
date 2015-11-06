@@ -212,7 +212,7 @@
               "Resource": [{
                   "Fn::Join": [
                     "",
-                    [ "arn:aws:s3:::", { "Ref": "SnapshotBackupPublicKeysBucketName" } ]
+                    [ "arn:aws:s3:::", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "/*" ]
                   ]
                 }]
             }
@@ -237,7 +237,7 @@
                 "s3:PutObject"
               ],
               "Resource": [{
-                "Fn::Join": ["", ["arn:aws:s3:::", { "Ref": "SnapshotBackupBucketName" } ] ]
+                "Fn::Join": ["", ["arn:aws:s3:::", { "Ref": "SnapshotBackupBucketName" }, "/*" ] ]
               }]
             }
           ]

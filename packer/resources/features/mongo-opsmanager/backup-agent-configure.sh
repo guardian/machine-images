@@ -27,7 +27,9 @@ ${SCRIPTPATH}/scripts/opsmanager_install_backup_agent.rb -a db
 
 # Make backup user
 if ! getent passwd backup >/dev/null; then
-  /usr/sbin/useradd -M -r --shell /sbin/nologin backup
+  /usr/sbin/useradd -r -m --shell /sbin/nologin backup
 fi
-chown backup /backup
+
 touch /tmp/last_snapshot_downloaded.txt
+chown backup /backup
+chown backup /tmp/last_snapshot_downloaded.txt
