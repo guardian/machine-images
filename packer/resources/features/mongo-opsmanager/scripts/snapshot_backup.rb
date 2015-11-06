@@ -1,6 +1,7 @@
 #! /usr/bin/env ruby
-#
-#
+# This script is designed to be run on a schedule. It gets the latest snapshot from opsmanager then encrypts it and
+# saves the snapshot to S3. The S3 bucket should be set up to be cross-region.
+
 require 'aws-sdk'
 require 'syslog'
 require 'optparse'
