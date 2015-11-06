@@ -52,16 +52,7 @@
     "DynamoMongoConfiguration": {
       "Description": "The dynamodb table to use for mongo configuration",
       "Type": "AWS::DynamoDB::Table"
-    },
-    "GetDistributablesPolicyS3": {
-      "Description": "The s3 bucket to use for distributables policy",
-      "Type": "AWS::S3::Bucket"
-    },
-    "GetConfigPolicyS3": {
-      "Description": "The s3 bucket to use for config policy",
-      "Type": "AWS::S3::Bucket"
     }
-
   },
   "Resources": {
     "ServerInstanceProfile": {
@@ -158,53 +149,6 @@
           ]
         },
         "Roles": [{"Ref": "ServerRole"}]
-      }
-    },
-    "GetDistributablesPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetDistributablesPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource":
-                { "Ref": "GetDistributablesPolicyS3" }
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
-    "GetConfigPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetConfigPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                { "Ref": "GetConfigPolicyS3" }
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
       }
     },
     "PushLogsPolicy": {
