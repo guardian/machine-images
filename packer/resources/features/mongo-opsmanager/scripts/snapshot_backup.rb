@@ -134,7 +134,7 @@ def download_import_team_keys
 end
 
 def generate_gpg_command(filename)
-  keys = `gpg --list-keys | grep uid`
+  keys = `gpg --homedir /home/backup/ --list-keys | grep uid`
   key_uid_list = keys.split('\n')
   emails = key_uid_list.map{|uid| uid.split('<')[1].tr('>', '').tr("\n", '')}
   emails_as_args = emails.map{|email| "-r #{email}"}.join(' ')
