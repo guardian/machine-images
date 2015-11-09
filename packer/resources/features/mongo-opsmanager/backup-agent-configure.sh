@@ -26,7 +26,7 @@ start mongodb-mms-automation-agent
 ${SCRIPTPATH}/scripts/opsmanager_install_backup_agent.rb -a db
 
 # Make backup user
-if ! getent passwd backup >/dev/null; then
+if ! getent passwd flex-backup >/dev/null; then
   /usr/sbin/useradd -r -m --shell /sbin/nologin flex-backup
 fi
 
