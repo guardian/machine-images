@@ -116,15 +116,17 @@ def download_encrypt_backup(download_link)
 end
 
 def upload_to_s3(file_name)
+  backup_location = "/backup/#{file_name}"
   time = Time.now
   year_month_day = "#{time.year}-#{time.month}-#{time.day}"
   year_month_day_time = "#{year_month_day}-#{time.hour}:#{time.min}#{time.zone}"
   key = "#{year_month_day}/#{year_month_day_time}-#{file_name}"
 
-  logger.info("Uploading #{file_name} to bucket #{@options.backup_bucket} with key #{key}")
+  logger.info("Uploading #{backup_location} to bucket #{@options.backup_bucket} with key #{key}")
   s3 = Aws::S3::Resource.new
   object = s3.bucket(@options.backup_bucket).object(key)
-  object.upload_file("/backup/#{file_name}")
+  object.upload_file(backup_location)
+  `rm #{backup_location}`
 end
 
 ## main
