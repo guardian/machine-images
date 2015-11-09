@@ -441,7 +441,7 @@
                 "/opt/features/mongo-opsmanager/backup-agent-configure.sh",
                 "chown backup /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb",
                 { "Fn::Join": [ "", ["echo '0 */3 * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "' > /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"] ] },
-                "crontab -u backup /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"
+                "crontab -u flex-backup /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"
               ]
             ]
           }
