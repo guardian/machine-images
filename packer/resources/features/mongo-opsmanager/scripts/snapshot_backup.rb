@@ -135,14 +135,14 @@ def generate_gpg_command(filename)
   key_uid_list = keys.split('\n')
   emails = key_uid_list.map{|uid| uid.split('<')[1].tr('>', '').tr("\n", '')}
   emails_as_args = emails.map{|email| "-r #{email}"}.join(' ')
-  encrypt_command =  "gpg --homedir /home/flex-backup/ -e #{emails_as_args} --trust-model always -o /backup/#{filename}.gpg"
+  encrypt_command =  "gpg --homedir /home/flex-backup/ -e #{emails_as_args} --trust-model always -o /backup/#{filename}"
   logger.info("GPG command: #{encrypt_command}")
   encrypt_command
 end
 
 def download_encrypt_backup(download_link)
   # download the file
-  file_name=download_link.split('/')[-1]
+  file_name=download_link.split('/')[-1] + '.gpg'
   gpg_command = generate_gpg_command(file_name)
   download_encrypt_command = "curl #{download_link} | #{gpg_command}"
   logger.info("Downloading and encrypting using command #{download_encrypt_command}.")
