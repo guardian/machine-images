@@ -17,9 +17,6 @@ require_relative 'mongodb/rs_config'
 ## Set sys logger facility
 SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
 
-# Regex to find a valid email
-VALID_EMAIL_REGEX = /\A[\w+\-.]+@[a-z\d\-]+(\.[a-z]+)*\.[a-z]+\z/i
-
 # Set up 'can not continue' exception class
 class FatalError < StandardError
 end
