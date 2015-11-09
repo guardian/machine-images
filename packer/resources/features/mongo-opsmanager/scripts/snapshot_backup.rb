@@ -83,41 +83,6 @@ def get_identity_instances
   AwsHelper::EC2::get_instances(tags)
 end
 
-## main
-exit if __FILE__ != $0
-
-# use instance profile (when on instance)
-Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
-Aws.config[:region] = AwsHelper::Metadata::region
-
-@options = parse_options(ARGV)
-
-# Set up global logger
-Util::SingletonLogger.instance.init_syslog(
-    ident = 'add_self_to_replset',
-    facility = Syslog::LOG_LOCAL1,
-    quiet_mode = @options.quiet_mode
-)
-
-logger.info('MongoDB: Backup snapshot...')
-
-tags = AwsHelper::InstanceData::get_tags
-rs_key = [tags['Stack'], 'db', tags['Stage']].join('-')
-
-replica_set_config = MongoDB::ReplicaSetConfig.new(nil, rs_key)
-
-locksmith = Locksmith::DynamoDB.new(
-    lock_table_name = 'mongo-initialisation',
-    max_attempts = 240,
-    lock_retry_time = 10,
-    ttl = 3600
-)
-
-locksmith.lock(replica_set_config.key) do
-  ops_manager_config = replica_set_config.ops_manager_data
-  @ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(ops_manager_config))
-end
-
 def check_if_snapshot_new(snapshot_id)
   `grep #{snapshot_id} /tmp/last_snapshot_downloaded.txt`.length == 0
 end
@@ -160,6 +125,41 @@ def upload_to_s3(file_name)
   s3 = Aws::S3::Resource.new
   object = s3.bucket(@options.backup_bucket).object(key)
   object.upload_file("/backup/#{file_name}")
+end
+
+## main
+exit if __FILE__ != $0
+
+# use instance profile (when on instance)
+Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
+Aws.config[:region] = AwsHelper::Metadata::region
+
+@options = parse_options(ARGV)
+
+# Set up global logger
+Util::SingletonLogger.instance.init_syslog(
+    ident = 'add_self_to_replset',
+    facility = Syslog::LOG_LOCAL1,
+    quiet_mode = @options.quiet_mode
+)
+
+logger.info('MongoDB: Backup snapshot...')
+
+tags = AwsHelper::InstanceData::get_tags
+rs_key = [tags['Stack'], 'db', tags['Stage']].join('-')
+
+replica_set_config = MongoDB::ReplicaSetConfig.new(nil, rs_key)
+
+locksmith = Locksmith::DynamoDB.new(
+    lock_table_name = 'mongo-initialisation',
+    max_attempts = 240,
+    lock_retry_time = 10,
+    ttl = 3600
+)
+
+locksmith.lock(replica_set_config.key) do
+  ops_manager_config = replica_set_config.ops_manager_data
+  @ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(ops_manager_config))
 end
 
 latest_snapshot_id = @ops_manager.get_latest_snapshot_id
