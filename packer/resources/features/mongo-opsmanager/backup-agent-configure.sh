@@ -27,9 +27,7 @@ ${SCRIPTPATH}/scripts/opsmanager_install_backup_agent.rb -a db
 
 # Make backup user
 if ! getent passwd flex-backup >/dev/null; then
-  /usr/sbin/useradd -r -m --shell /sbin/nologin flex-backup
+    /usr/sbin/useradd -r -m --shell /sbin/nologin flex-backup
 fi
 
-touch /tmp/last_snapshot_downloaded.txt
 chown flex-backup /backup
-chown flex-backup /tmp/last_snapshot_downloaded.txt
