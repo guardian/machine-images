@@ -44,14 +44,6 @@
     "CustomerMasterKey": {
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
-    },
-    "DynamoMongoInitialisation": {
-      "Description": "The dynamodb table to use for mongo initialisation",
-      "Type": "AWS::DynamoDB::Table"
-    },
-    "DynamoMongoConfiguration": {
-      "Description": "The dynamodb table to use for mongo configuration",
-      "Type": "AWS::DynamoDB::Table"
     }
   },
   "Resources": {
@@ -193,8 +185,18 @@
                 "dynamodb:UpdateItem"
               ],
               "Resource": [
-                { "Ref": "DynamoMongoInitialisation" },
-                { "Ref": "DynamoMongoConfiguration" }
+                "arn:aws:dynamodb:eu-west-1:942464564246:table/mongo-initialisation",
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:dynamodb:eu-west-1:942464564246:table/mongo.rsconfig.identity-db-",
+                      {
+                        "Ref": "Stage"
+                      }
+                    ]
+                  ]
+                }
               ]
             }
           ]
