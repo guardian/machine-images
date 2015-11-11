@@ -193,12 +193,31 @@
                 "dynamodb:UpdateItem"
               ],
               "Resource": [
-                "arn:aws:dynamodb:eu-west-1:942464564246:table/mongo-initialisation",
                 {
                   "Fn::Join": [
                     "",
                     [
-                      "arn:aws:dynamodb:eu-west-1:942464564246:table/mongo.rsconfig.identity-db-",
+                      "arn:aws:dynamodb",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":table/mongo-initialisation"
+                    ]
+                  ],
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:dynamodb",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":table/mongo.rsconfig.identity-db-",
                       {
                         "Ref": "Stage"
                       }
