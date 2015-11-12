@@ -25,3 +25,13 @@ cat > /etc/rsyslog.d/31-mongo-scripts.conf <<EOF
 local1.*    /var/log/mongodb/scripts.log
 EOF
 service rsyslog restart
+
+# install script to disable transparent huge pages
+install -m 755 ${SCRIPTPATH}/../mongo-opsmanager/templates/disable-transparent-hugepages /etc/init.d/disable-transparent-hugepages
+update-rc.d disable-transparent-hugepages defaults
+
+# install script to set readahead
+install -m 755 ${SCRIPTPATH}/../mongo-opsmanager/templates/set-readahead /etc/init.d/set-readahead
+update-rc.d set-readahead defaults
+
+echo "net.ipv4.tcp_keepalive_time = 300" > /etc/sysctl.d/71-tcp-keepalive.conf

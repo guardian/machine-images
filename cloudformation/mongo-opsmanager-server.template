@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "MongoDB test stack",
+  "Description": "MongoDB OpsManager Server",
   "Parameters": {
     "KeyName": {
       "Description": "The EC2 Key Pair to allow SSH access to the instance",
@@ -34,13 +34,13 @@
       "Default": "3"
     },
     "CustomerMasterKey": {
-      "Description": "The KMS CMK to use to encrypt the EBS volume",
+      "Description": "The KMS CMK to use to encrypt the EBS volumes",
       "Type": "String"
     },
-    "IOPS": {
-      "Description": "IOPS to provision",
-      "Type": "Number",
-      "Default": "200"
+    "SSLCertificateArn": {
+      "Description": "ARN of the SSL certificate for *.gutools.co.uk",
+      "Type": "String",
+      "Default": "arn:aws:iam::743583969668:server-certificate/sites.gutools.co.uk-exp2015-10-20"
     }
   },
   "Resources": {
@@ -140,79 +140,6 @@
         "Roles": [{"Ref": "ServerRole"}]
       }
     },
-    "GetDistributablesPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetDistributablesPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                "arn:aws:s3:::composer-dist/*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
-    "GetConfigPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetConfigPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                "arn:aws:s3:::guconf-flexible/*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
-    "PushLogsPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "PushLogs",
-        "PolicyDocument": {
-          "Version": "2012-10-17",
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "logs:*"
-              ],
-              "Resource": [
-                "arn:aws:logs:*:*:*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
     "LockTablePolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
@@ -235,7 +162,7 @@
                   "Fn::Join": [
                     "",
                     [
-                      "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo.rsconfig.flexible-db-",
+                      "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo.ops-manager-config.flexible-opsmanager-",
                       {
                         "Ref": "Stage"
                       }
@@ -253,28 +180,7 @@
         ]
       }
     },
-    "CloudwatchPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "CloudwatchPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "cloudwatch:PutMetricData"
-              ],
-              "Resource": "*"
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
+
     "SSHSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -295,20 +201,153 @@
     "ReplicationSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Allow connections to mongo DB",
+        "GroupDescription": "Allow connections to mongo DBs",
         "VpcId": {
           "Ref": "VpcId"
-        },
+        }
+      }
+    },
+    "ReplicationSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "ReplicationSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "27017",
+        "ToPort": "27018",
+        "SourceSecurityGroupId": { "Ref": "ReplicationSecurityGroup" }
+      }
+    },
+    "ServerLoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow access to app from ELBs",
+        "VpcId": { "Ref": "VpcId" },
         "SecurityGroupIngress": [
           {
             "IpProtocol": "tcp",
-            "FromPort": "27017",
-            "ToPort": "27017",
-            "CidrIp": "10.0.0.0/8"
+            "FromPort": "8080",
+            "ToPort": "8080",
+            "SourceSecurityGroupId": { "Ref": "MMSLoadBalancerSecurityGroup" }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8081",
+            "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroup" }
           }
         ]
       }
     },
+
+    "MMSLoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": { "Ref": "VpcId" },
+        "GroupDescription": "Allow access to OpsManager on private ELB ",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8080",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "MMSLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Scheme": "internal",
+        "CrossZone": true,
+        "Listeners": [
+          {
+            "Protocol": "HTTPS",
+            "LoadBalancerPort": "443",
+            "InstancePort": "8080",
+            "SSLCertificateId": { "Ref": "SSLCertificateArn" }
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:8080/user/login",
+          "Timeout": "5",
+          "Interval": "10",
+          "UnhealthyThreshold": "5",
+          "HealthyThreshold": "2"
+        },
+        "Subnets": { "Ref": "PrivateVpcSubnets" },
+        "SecurityGroups": [
+          { "Ref": "MMSLoadBalancerSecurityGroup" }
+        ]
+      }
+    },
+
+    "BackupLoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": { "Ref": "VpcId" },
+        "GroupDescription": "Allow access to backup endpoint on internal ELB",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.202.0/23"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.204.0/23"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.206.0/23"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8081",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
+    "BackupLoadBalancer": {
+      "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
+      "Properties": {
+        "Scheme": "internal",
+        "CrossZone": true,
+        "Listeners": [
+          {
+            "Protocol": "HTTP",
+            "LoadBalancerPort": "8081",
+            "InstancePort": "8081"
+          }
+        ],
+        "HealthCheck": {
+          "Target": "HTTP:8080/user/login",
+          "Timeout": "10",
+          "Interval": "20",
+          "UnhealthyThreshold": "10",
+          "HealthyThreshold": "2"
+        },
+        "Subnets": { "Ref": "PrivateVpcSubnets" },
+        "SecurityGroups": [
+          { "Ref": "BackupLoadBalancerSecurityGroup" }
+        ]
+      }
+    },
+
     "AutoscalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
@@ -327,7 +366,8 @@
         },
         "Cooldown": "180",
         "HealthCheckType": "EC2",
-        "HealthCheckGracePeriod": 300,
+        "HealthCheckGracePeriod": 1800,
+        "LoadBalancerNames": [ { "Ref": "MMSLoadBalancer" }, { "Ref": "BackupLoadBalancer" } ],
         "Tags": [
           {
             "Key": "Stage",
@@ -343,7 +383,7 @@
           },
           {
             "Key": "App",
-            "Value": "db",
+            "Value": "opsmanager",
             "PropagateAtLaunch": "true"
           }
         ]
@@ -359,14 +399,11 @@
           "Ref": "MachineImagesAMI"
         },
         "SecurityGroups": [
-          {
-            "Ref": "SSHSecurityGroup"
-          },
-          {
-            "Ref": "ReplicationSecurityGroup"
-          }
+          { "Ref": "SSHSecurityGroup" },
+          { "Ref": "ReplicationSecurityGroup" },
+          { "Ref": "ServerLoadBalancerSecurityGroup"}
         ],
-        "InstanceType": "m4.large",
+        "InstanceType": "r3.xlarge",
         "IamInstanceProfile": {
           "Ref": "ServerInstanceProfile"
         },
@@ -376,8 +413,10 @@
               "\n",
               [
                 "#!/bin/bash -ev",
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -x  -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
-                "/opt/features/mongo-opsmanager/agent-configure.sh"
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 200 -d f -m /var/lib/mongodb/application -o 'defaults,noatime' -x -u mongodb -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 200 -d g -m /var/lib/mongodb/blockstore -o 'defaults,noatime' -x -u mongodb -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 200 -d h -m /var/lib/mongodb/backup -o 'defaults,noatime' -x -u mongodb-mms -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
+                "/opt/features/mongo-opsmanager/server-configure.sh"
               ]
             ]
           }

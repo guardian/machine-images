@@ -31,7 +31,7 @@
     "Size": {
       "Description": "Size of ASG",
       "Type": "Number",
-      "Default": "3"
+      "Default": "1"
     },
     "CustomerMasterKey": {
       "Description": "The KMS CMK to use to encrypt the EBS volume",
@@ -41,6 +41,16 @@
       "Description": "IOPS to provision",
       "Type": "Number",
       "Default": "200"
+    },
+    "SnapshotBackupBucketName": {
+      "Description": "Bucket to store backup snapshots in",
+      "Type": "String",
+      "Default": "flex-mongo-snapshots-backup"
+    },
+    "SnapshotBackupPublicKeysBucketName": {
+      "Description": "Bucket to store team public keys in (used to encrypt backup)",
+      "Type": "String",
+      "Default": "flex-mongo-snapshots-backup-public-keys"
     }
   },
   "Resources": {
@@ -188,6 +198,57 @@
         ]
       }
     },
+    "GetBackupKeysPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GetBackupKeysPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject"
+              ],
+              "Resource": [{
+                  "Fn::Join": [
+                    "",
+                    [ "arn:aws:s3:::", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "/*" ]
+                  ]
+                }]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
+    "UploadBackupPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "UploadBackupPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:PutObject"
+              ],
+              "Resource": [{
+                "Fn::Join": ["", ["arn:aws:s3:::", { "Ref": "SnapshotBackupBucketName" }, "/*" ] ]
+              }]
+            }
+          ]
+        },
+        "Roles": [
+          {
+            "Ref": "ServerRole"
+          }
+        ]
+      }
+    },
     "PushLogsPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
@@ -292,23 +353,6 @@
         ]
       }
     },
-    "ReplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "GroupDescription": "Allow connections to mongo DB",
-        "VpcId": {
-          "Ref": "VpcId"
-        },
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "27017",
-            "ToPort": "27017",
-            "CidrIp": "10.0.0.0/8"
-          }
-        ]
-      }
-    },
     "AutoscalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
@@ -343,10 +387,30 @@
           },
           {
             "Key": "App",
-            "Value": "db",
+            "Value": "db_backup",
             "PropagateAtLaunch": "true"
           }
         ]
+      }
+    },
+    "SnapshotBackupS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "BucketName": {"Ref": "SnapshotBackupBucketName"},
+        "LifecycleConfiguration": {
+          "Rules": [{
+              "ExpirationInDays": 7,
+              "Status": "Enabled"
+            }]
+        }
+      }
+    },
+    "TeamKeysS3Bucket": {
+      "Type": "AWS::S3::Bucket",
+      "DeletionPolicy": "Retain",
+      "Properties": {
+        "BucketName": {"Ref": "SnapshotBackupPublicKeysBucketName"}
       }
     },
     "LaunchConfig": {
@@ -361,12 +425,9 @@
         "SecurityGroups": [
           {
             "Ref": "SSHSecurityGroup"
-          },
-          {
-            "Ref": "ReplicationSecurityGroup"
           }
         ],
-        "InstanceType": "m4.large",
+        "InstanceType": "m3.medium",
         "IamInstanceProfile": {
           "Ref": "ServerInstanceProfile"
         },
@@ -376,8 +437,10 @@
               "\n",
               [
                 "#!/bin/bash -ev",
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -x  -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
-                "/opt/features/mongo-opsmanager/agent-configure.sh"
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /backup -o 'defaults,noatime' -x  -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
+                "/opt/features/mongo-opsmanager/backup-agent-configure.sh",
+                { "Fn::Join": [ "", ["echo '*/30 * * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "' > /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"] ] },
+                "crontab -u mongo-backup /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"
               ]
             ]
           }

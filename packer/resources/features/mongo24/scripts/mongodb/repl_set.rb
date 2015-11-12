@@ -118,7 +118,7 @@ module MongoDB
           :password => @admin_password,
           :connect_timeout => CONNECT_WAIT,
           :read => {:mode => read_pref},
-          :replica_set => @config.key,
+          :replica_set => @config.name,
           :connect => :replica_set
       )
     end

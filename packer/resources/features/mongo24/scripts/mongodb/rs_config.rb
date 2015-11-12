@@ -21,9 +21,9 @@ module MongoDB
       [tags['Stack'], tags['App'], tags['Stage']].join('-')
     end
 
-    def initialize(table_name=nil, key=nil)
+    def initialize(key=nil)
       @key = key || build_replica_set_key
-      @table_name = table_name || "mongo.rsconfig.#{@key}"
+      @table_name = "mongo.rsconfig.#{@key}"
       ensure_table_exists
     end
 
