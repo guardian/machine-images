@@ -308,6 +308,25 @@
         "HealthCheckGracePeriod": 300,
         "Tags": [
           {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "Stage"
+                  },
+                  ":",
+                  {
+                    "Ref": "Stack"
+                  },
+                  "-db"
+                ]
+              ]
+            },
+            "PropagateAtLaunch": "true"
+          },
+          {
             "Key": "Stage",
             "Value": {
               "Ref": "Stage"
