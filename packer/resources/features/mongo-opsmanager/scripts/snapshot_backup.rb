@@ -152,28 +152,18 @@ rs_key = [tags['Stack'], 'db', tags['Stage']].join('-')
 
 replica_set_config = MongoDB::ReplicaSetConfig.new(nil, rs_key)
 
-locksmith = Locksmith::DynamoDB.new(
-    lock_table_name = 'mongo-initialisation',
-    max_attempts = 240,
-    lock_retry_time = 10,
-    ttl = 3600
-)
+ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(replica_set_config.ops_manager_data))
 
-locksmith.lock(replica_set_config.key) do
-  ops_manager_config = replica_set_config.ops_manager_data
-  @ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(ops_manager_config))
-end
-
-latest_snapshot_id = @ops_manager.get_latest_snapshot_id
+latest_snapshot_id = ops_manager.get_latest_snapshot_id
 if check_if_snapshot_new(latest_snapshot_id)
   # save the id of the snapshot to disk
   `echo #{latest_snapshot_id} > /tmp/last_snapshot_downloaded.txt`
   # fetch the snapshot download link
-  @download_link = @ops_manager.get_snapshot_download_link(latest_snapshot_id)
+  download_link = ops_manager.get_snapshot_download_link(latest_snapshot_id)
   # download and import keys from s3
   download_import_team_keys
   # download backup, encrypting at the same time
-  encrypted_backup_name=download_encrypt_backup(@download_link)
+  encrypted_backup_name=download_encrypt_backup(download_link)
   # upload backup to s3
   upload_to_s3(encrypted_backup_name)
   logger.info('MongoDB: Snapshot backup complete!')
