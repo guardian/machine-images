@@ -24,3 +24,10 @@ start mongodb-mms-automation-agent
 
 # Install backup agent
 ${SCRIPTPATH}/scripts/opsmanager_install_backup_agent.rb -a db
+
+# Make backup user
+if ! getent passwd mongo-backup >/dev/null; then
+    /usr/sbin/useradd -r -m --shell /sbin/nologin mongo-backup
+fi
+
+chown mongo-backup /backup

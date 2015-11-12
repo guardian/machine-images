@@ -1,5 +1,6 @@
 require 'httparty'
 require_relative '../util/logger'
+require 'json'
 
 module MongoDB
   class OpsManagerAPI
@@ -60,6 +61,30 @@ module MongoDB
         sleep 5
       end
       logger.info 'Successfully reached goal state'
+    end
+
+    def get_group_cluster_0_id
+      clusters = self.class.get("/clusters")
+
+      clusters['results'][0]['id']
+    end
+
+    def snapshots
+      self.class.get("/clusters/#{get_group_cluster_0_id}/snapshots")
+    end
+
+    def create_restore_job_for_snapshot(snapshot)
+      post_data = {
+          :body => { "snapshotId" => snapshot }.to_json,
+          :headers => { 'Content-Type' => 'application/json'}
+      }
+      restore_job_response = self.class.post("/clusters/#{get_group_cluster_0_id}/restoreJobs", post_data)
+      logger.info("Restore job response: #{JSON.parse(restore_job_response.body)}")
+      JSON.parse(restore_job_response.body)['results'][0]['id']
+    end
+
+    def get_restore_job_status(restore_job_id)
+      self.class.get("/clusters/#{get_group_cluster_0_id}/restoreJobs/#{restore_job_id}")
     end
   end
 
@@ -217,6 +242,39 @@ module MongoDB
         logger.info 'This host already has the backup agent, no work to do'
       end
 
+    end
+
+    def poll_for_restore_download_uri(restore_job_id, attempt_no=0)
+      restore_job_status = @api.get_restore_job_status(restore_job_id)
+      if restore_job_status['statusName'] == 'FINISHED' && restore_job_status['delivery']['statusName'] =='READY'
+        restore_job_status['delivery']['url']
+      else
+        if attempt_no < 60
+          sleep(5)
+          poll_for_restore_download_uri(restore_job_id, attempt_no+1)
+        else
+          raise FatalError, "Restore job took longer than 10 minutes to create download URL, restore job id #{restore_job_id}"
+        end
+      end
+    end
+
+    def get_latest_snapshot_id
+      snapshots = @api.snapshots
+      latest_snapshot_id = snapshots['results'][0]['id']
+      latest_snapshot_created = snapshots['results'][0]['created']['date']
+      logger.info "Latest snapshot has id #{latest_snapshot_id}, create date #{latest_snapshot_created}"
+      latest_snapshot_id
+    end
+
+    def get_snapshot_download_link(snapshot_id)
+      # create restore job for the snapshot
+      restore_job_id = @api.create_restore_job_for_snapshot(snapshot_id)
+      logger.info "Restore job id: #{restore_job_id}"
+
+      # wait for download link to be ready
+      download_link = poll_for_restore_download_uri(restore_job_id)
+      logger.info "Snapshot download link: #{download_link}"
+      download_link
     end
   end
 end
