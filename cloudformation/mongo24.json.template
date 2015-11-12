@@ -45,14 +45,6 @@
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
     },
-    "DynamoMongoInitialisation": {
-            "Description": "The dynamodb table to use for mongo initialisation",
-          "Type": "AWS::DynamoDB::Table"
-    },
-    "DynamoMongoConfiguration": {
-        "Description": "The dynamodb table to use for mongo configuration",
-        "Type": "AWS::DynamoDB::Table"
-    }
   },
   "Resources": {
     "ServerInstanceProfile": {
@@ -217,7 +209,11 @@
                       {
                         "Ref": "AWS::AccountId"
                       },
-                      ":table/mongo.rsconfig.identity-db-",
+                      ":table/mongo.rsconfig.",
+                      {
+                        "Ref": "Stack"
+                      },
+                      "-db-",
                       {
                         "Ref": "Stage"
                       }
