@@ -218,7 +218,9 @@
                       },
                       ":table/mongo-initialisation"
                     ]
-                  ],
+                  ]
+                },
+                {
                   "Fn::Join": [
                     "",
                     [
