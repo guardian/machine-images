@@ -32,6 +32,10 @@ function HELP {
 
     -t type       [optional] Specify a volume type.
 
+    -i iops       [when type=io1] Specify the number of provisioned IOPS
+
+    -o options    [optional] Specify file system options (defaults to "defaults")
+
     -h            Displays this help message. No further functions are
                   performed.
 
@@ -40,9 +44,10 @@ exit 1
 }
 
 DELETE_ON_TERMINATION="false"
+OPTIONS="defaults"
 
 # Process options
-while getopts d:m:u:s:k:t:xh FLAG; do
+while getopts d:m:u:s:k:t:i:xo:h FLAG; do
   case $FLAG in
     d)
       DEVICE_LETTER=$OPTARG
@@ -62,8 +67,14 @@ while getopts d:m:u:s:k:t:xh FLAG; do
     t)
       VOLUME_TYPE=$OPTARG
       ;;
+    i)
+      IOPS=$OPTARG
+      ;;
     x)
       DELETE_ON_TERMINATION="true"
+      ;;
+    o)
+      OPTIONS=$OPTARG
       ;;
     h)  #show help
       HELP
@@ -90,6 +101,13 @@ fi
 
 if [ -n "${VOLUME_TYPE}" ]; then
   OPTIONAL_ARGS="${OPTIONAL_ARGS} --volume-type ${VOLUME_TYPE}"
+  if [ "${VOLUME_TYPE}" == "io1" ]; then
+    if [ -z "${IOPS}" ]; then
+      echo "Must specify -i when type is io1"
+      exit 1
+    fi
+    OPTIONAL_ARGS="${OPTIONAL_ARGS} --iops ${IOPS}"
+  fi
 fi
 
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
@@ -207,7 +225,8 @@ wait_for_device ${UBUNTU_DEVICE}
 if [ -n "${MOUNTPOINT}" ]; then
   mkdir -p ${MOUNTPOINT}
   mkfs -t ext4 ${UBUNTU_DEVICE}
-  mount ${UBUNTU_DEVICE} ${MOUNTPOINT}
+  echo "${UBUNTU_DEVICE} ${MOUNTPOINT} ext4 ${OPTIONS} 0 0" >> /etc/fstab
+  mount ${MOUNTPOINT}
   if [ -n "${MOUNT_USER}" ]; then
     chown ${MOUNT_USER} ${MOUNTPOINT}
   fi
