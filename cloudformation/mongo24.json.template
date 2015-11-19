@@ -208,10 +208,11 @@
                   "Fn::Join": [
                     "",
                     [
-                      "arn:aws:dynamodb",
+                      "arn:aws:dynamodb:",
                       {
                         "Ref": "AWS::Region"
                       },
+                      ":",
                       {
                         "Ref": "AWS::AccountId"
                       },
@@ -221,10 +222,11 @@
                   "Fn::Join": [
                     "",
                     [
-                      "arn:aws:dynamodb",
+                      "arn:aws:dynamodb:",
                       {
                         "Ref": "AWS::Region"
                       },
+                      ":",
                       {
                         "Ref": "AWS::AccountId"
                       },
