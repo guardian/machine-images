@@ -45,6 +45,11 @@
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
     },
+    "SshKeyFileS3Url": {
+      "Description": "S3 URL for a list of public SSH keys to use for the default ubuntu user",
+      "Type": "String",
+      "Default": ""
+    },
     "IOPS": {
       "Description": "IOPS to provision",
       "Type": "Number",
@@ -63,6 +68,11 @@
       "Description": "The visibility mask controls which mongo members are visible (instead of hidden). This defaults to 'abc' which means that instances in availability zones a, b and c will be visible. Set to empty string for hidden members",
       "Type": "String",
       "Default": "abc"
+    }
+  },
+  "Conditions" : {
+    "DoNotRetrieveSshKeysFromS3" : {
+      "Fn::Equals" : [ {"Ref" : "SshKeyFileS3Url"}, "" ]
     }
   },
   "Resources": {
@@ -398,6 +408,12 @@
               "",
               [
                 "#!/bin/bash -ev\n",
+                { "Fn::If" : [
+                    "DoNotRetrieveSshKeysFromS3",
+                    "# Not retrieving SSH keys from S3",
+                    { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
+                  ]
+                },
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -u mongodb -x -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] }, "\n",
                 "/opt/features/mongo24/configure.sh --zone_visibility_mask '", { "Ref": "MemberVisibilityMask" } ,"'\n"
               ]
