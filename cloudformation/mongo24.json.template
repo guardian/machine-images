@@ -16,6 +16,14 @@
         "PROD"
       ]
     },
+    "Application": {
+      "Description": "Application name",
+      "Type": "String"
+    },
+    "Stack": {
+      "Description": "Stack name",
+      "Type": "String"
+    },
     "VpcId": {
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
       "Type": "AWS::EC2::VPC::Id"
@@ -164,54 +172,6 @@
         "Roles": [{"Ref": "ServerRole"}]
       }
     },
-    "GetDistributablesPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetDistributablesPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                "arn:aws:s3:::composer-dist/*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
-    "GetConfigPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetConfigPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                "arn:aws:s3:::guconf-flexible/*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
     "PushLogsPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
@@ -254,12 +214,39 @@
                 "dynamodb:UpdateItem"
               ],
               "Resource": [
-                "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo-initialisation",
                 {
                   "Fn::Join": [
                     "",
                     [
-                      "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo.rsconfig.flexible-db-",
+                      "arn:aws:dynamodb:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":table/mongo-initialisation"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:dynamodb:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":table/mongo.rsconfig.",
+                      {
+                        "Ref": "Stack"
+                      },
+                      "-db-",
                       {
                         "Ref": "Stage"
                       }
@@ -354,6 +341,25 @@
         "HealthCheckGracePeriod": 300,
         "Tags": [
           {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "Stage"
+                  },
+                  ":",
+                  {
+                    "Ref": "Stack"
+                  },
+                  "-db"
+                ]
+              ]
+            },
+            "PropagateAtLaunch": "true"
+          },
+          {
             "Key": "Stage",
             "Value": {
               "Ref": "Stage"
@@ -362,7 +368,9 @@
           },
           {
             "Key": "Stack",
-            "Value": "flexible",
+            "Value": {
+              "Ref": "Stack"
+            },
             "PropagateAtLaunch": "true"
           },
           {
