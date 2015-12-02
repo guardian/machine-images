@@ -8,6 +8,9 @@ if ! (dpkg -s dnsmasq 2> /dev/null > /dev/null); then
     apt-get install -y dnsmasq
 fi
 
+# Make sure /etc/dnsmasq.d is being included
+sed -i '/conf-dir/s/^#//g' /etc/dnsmasq.conf
+
 # Generate the config file
 PROXIES=( "10.252.63.100" "10.253.63.100" )
 DOMAINS=( "guprod.gnl" "dc1.gnm" "dc2.gnm" "dmz.gnl" "gws.gutools.co.uk" \
