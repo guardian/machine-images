@@ -74,3 +74,6 @@ echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit.conf
 
 new_section "Configuring locale"
 locale-gen en_GB.UTF-8
+
+# Download github public keys
+aws s3 sync s3://github-team-keys/ ~/github-team-keys/
