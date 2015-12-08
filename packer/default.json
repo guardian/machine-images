@@ -9,7 +9,8 @@
     "account_numbers": "",
     "build_branch": "DEV",
     "euw1_trusty_source_ami": "ami-b17a12c6",
-    "euw1_vivid_source_ami": "ami-4aa8ea3d"
+    "euw1_vivid_source_ami": "ami-4aa8ea3d",
+    "instance_profile": "packer-machine-images"
   },
   "builders": [
     {
@@ -23,6 +24,7 @@
       "ami_name": "{{user `java7_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for {{user `java7_image_name`}} built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "{{user `java7_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
@@ -43,6 +45,7 @@
       "ami_name": "{{user `java8_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for {{user `java8_image_name`}} built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "{{user `java8_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
@@ -63,6 +66,7 @@
       "ami_name": "{{user `vivid_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for {{user `vivid_image_name`}} built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "{{user `vivid_image_name`}}_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
