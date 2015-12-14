@@ -55,4 +55,5 @@ fi
 ${DIR}/install-from-local.sh -t ${GITHUB_TEAM_NAME}
 ${DIR}/install.sh -t ${GITHUB_TEAM_NAME} -b ${GITHUB_KEYS_BUCKET}
 echo "*/30 * * * * /opt/features/ssh-keys/install.sh -b ${GITHUB_KEYS_BUCKET} -t ${GITHUB_TEAM_NAME}" > ${DIR}/ssh-keys-cron-job.txt
+echo "Initialising cron job"
 crontab -u ${SSH_USER} ${DIR}/ssh-keys-cron-job.txt

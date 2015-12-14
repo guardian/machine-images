@@ -48,8 +48,8 @@ if [ -z "${SSH_USER}" ]; then
   SSH_USER="ubuntu"
 fi
 
-STORED_SSH_KEY_FILE=~/github-team-keys/${GITHUB_TEAM_NAME}/authorized_keys
-echo $STORED_SSH_KEY_FILE
+STORED_SSH_KEY_FILE=/tmp/github-team-keys/${GITHUB_TEAM_NAME}/authorized_keys
+echo "Installing keys cached on ami creation from ${STORED_SSH_KEY_FILE}"
 
 
 ensure_ssh_directory_exists "${SSH_USER}"

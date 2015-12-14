@@ -67,6 +67,7 @@ fi
 
 TEMPORARY_SSH_KEY_FILE="/tmp/authorized_keys.$$"
 
+echo "Installing keys from S3"
 ensure_ssh_directory_exists "${SSH_USER}"
 check_ssh_key_url_is_valid "${S3_KEY_URL}"
 fetch_ssh_key_from_url "${S3_KEY_URL}" "${TEMPORARY_SSH_KEY_FILE}"
