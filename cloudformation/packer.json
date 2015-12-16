@@ -76,6 +76,11 @@
                            "Resource": [
                                "*"
                            ]
+                       },
+                       {
+                           "Effect":"Allow",
+                           "Action":"iam:PassRole",
+                           "Resource":"arn:aws:iam::743583969668:role/packer-machine-images"
                        }]
                    }
                }]

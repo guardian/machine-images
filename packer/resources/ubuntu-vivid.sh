@@ -74,3 +74,4 @@ echo "vm.overcommit_memory=1" > /etc/sysctl.d/70-vm-overcommit.conf
 
 new_section "Configuring locale"
 locale-gen en_GB.UTF-8
+
