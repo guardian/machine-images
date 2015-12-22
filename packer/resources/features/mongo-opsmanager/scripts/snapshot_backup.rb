@@ -125,8 +125,14 @@ def upload_to_s3(file_name)
   logger.info("Uploading #{backup_location} to bucket #{@options.backup_bucket} with key #{key}")
   s3 = Aws::S3::Resource.new
   object = s3.bucket(@options.backup_bucket).object(key)
-  object.upload_file(backup_location)
+  upload_success = object.upload_file(backup_location)
+  if upload_success
+    logger.info('Succesfully uploaded to S3.')
+  else
+    logger.error('Failed to upload backup to S3.')
+  end
   `rm #{backup_location}`
+  upload_success
 end
 
 ## main
@@ -156,8 +162,6 @@ ops_manager = MongoDB::OpsManager.new(MongoDB::OpsManagerAPI.new(replica_set_con
 
 latest_snapshot_id = ops_manager.get_latest_snapshot_id
 if check_if_snapshot_new(latest_snapshot_id)
-  # save the id of the snapshot to disk
-  `echo #{latest_snapshot_id} > /tmp/last_snapshot_downloaded.txt`
   # fetch the snapshot download link
   download_link = ops_manager.get_snapshot_download_link(latest_snapshot_id)
   # download and import keys from s3
@@ -165,8 +169,12 @@ if check_if_snapshot_new(latest_snapshot_id)
   # download backup, encrypting at the same time
   encrypted_backup_name=download_encrypt_backup(download_link)
   # upload backup to s3
-  upload_to_s3(encrypted_backup_name)
-  logger.info('MongoDB: Snapshot backup complete!')
+  upload_success = upload_to_s3(encrypted_backup_name)
+  if upload_success
+    # save the id of the snapshot to disk
+    `echo #{latest_snapshot_id} > /tmp/last_snapshot_downloaded.txt`
+    logger.info('MongoDB: Snapshot backup complete!')
+  end
 else
   logger.info ('Snapshot already backed up. Aborting.')
 end
