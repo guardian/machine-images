@@ -8,7 +8,7 @@ function HELP {
 
   Usage: ${0} -t team-github-name -b github-team-keys [-u ubuntu]
 
-  This script runs install-from-local.sh and sets up a cron job for install.sh to regularly
+  This script runs install.sh to install keys from s3 and sets up a cron job to regularly
   update the installed ssh keys
 
     -u user       [optional] the user to install the SSH keys for. Defaults to ubuntu.
@@ -52,7 +52,6 @@ if [ -z "${SSH_USER}" ]; then
   SSH_USER="ubuntu"
 fi
 
-${DIR}/install-from-local.sh -t ${GITHUB_TEAM_NAME}
 ${DIR}/install.sh -t ${GITHUB_TEAM_NAME} -b ${GITHUB_KEYS_BUCKET}
 echo "*/30 * * * * /opt/features/ssh-keys/install.sh -b ${GITHUB_KEYS_BUCKET} -t ${GITHUB_TEAM_NAME}" > ${DIR}/ssh-keys-cron-job.txt
 echo "Initialising cron job"
