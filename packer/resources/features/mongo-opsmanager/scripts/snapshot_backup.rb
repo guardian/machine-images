@@ -97,7 +97,7 @@ end
 
 def generate_gpg_command(filename)
   keys = `gpg --homedir /home/mongo-backup/.gnupg/ --list-keys | grep uid`
-  key_uid_list = keys.split('\n')
+  key_uid_list = keys.split("\n")
   emails = key_uid_list.map{|uid| uid.split('<')[1].tr('>', '').tr("\n", '')}
   emails_as_args = emails.map{|email| "-r #{email}"}.join(' ')
   encrypt_command =  "gpg --homedir /home/mongo-backup/.gnupg/ -e #{emails_as_args} --trust-model always -o /backup/#{filename}"
