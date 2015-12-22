@@ -17,6 +17,9 @@ require_relative 'mongodb/rs_config'
 ## Set sys logger facility
 SYS_LOG_FACILITY = Syslog::LOG_LOCAL1
 
+# gpg home directory
+GPG_HOME_DIR = '/home/mongo-backup/.gnupg'
+
 # Set up 'can not continue' exception class
 class FatalError < StandardError
 end
@@ -92,15 +95,15 @@ def download_import_team_keys
   logger.info("Downloading document #{keyring_document_key} from bucket #{@options.keys_bucket}")
   s3 = Aws::S3::Client.new
   s3.get_object({bucket: @options.keys_bucket, key: keyring_document_key}, target: '/tmp/flexbackupkeys.gpg')
-  `gpg --homedir /home/mongo-backup/.gnupg/ --import /tmp/flexbackupkeys.gpg`
+  `gpg --homedir #{GPG_HOME_DIR} --import /tmp/flexbackupkeys.gpg`
 end
 
 def generate_gpg_command(filename)
-  keys = `gpg --homedir /home/mongo-backup/.gnupg/ --list-keys | grep uid`
+  keys = `gpg --homedir #{GPG_HOME_DIR} --list-keys | grep uid`
   key_uid_list = keys.split("\n")
   emails = key_uid_list.map{|uid| uid.split('<')[1].tr('>', '').tr("\n", '')}
   emails_as_args = emails.map{|email| "-r #{email}"}.join(' ')
-  encrypt_command =  "gpg --homedir /home/mongo-backup/.gnupg/ -e #{emails_as_args} --trust-model always -o /backup/#{filename}"
+  encrypt_command =  "gpg --homedir #{GPG_HOME_DIR}  -e #{emails_as_args} --trust-model always -o /backup/#{filename}"
   logger.info("GPG command: #{encrypt_command}")
   encrypt_command
 end
