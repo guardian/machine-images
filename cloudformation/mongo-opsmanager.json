@@ -41,6 +41,15 @@
       "Description": "IOPS to provision",
       "Type": "Number",
       "Default": "200"
+    },
+    "InstanceType": {
+      "Description": "The instance type for the database nodes (typically smaller for prePROD)",
+      "Type": "String",
+      "AllowedValues": [
+        "m4.large",
+        "m4.xlarge",
+        "r3.xlarge"
+      ]
     }
   },
   "Resources": {
@@ -366,7 +375,7 @@
             "Ref": "ReplicationSecurityGroup"
           }
         ],
-        "InstanceType": "m4.large",
+        "InstanceType": { "Ref": "InstanceType" },
         "IamInstanceProfile": {
           "Ref": "ServerInstanceProfile"
         },
