@@ -19,3 +19,10 @@ wget -qO /tmp/kong.deb "https://downloadkong.org/${ubuntu_codename}_all.deb"
 echo "Installing Kong"
 dpkg -i /tmp/kong.deb
 
+echo "Enabling nginx access logs"
+sed -i"" -e 's/access_log off/access_log on/' /etc/kong/kong.yml
+
+echo "Setting up logrotate for Kong"
+my_directory="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cp $my_directory/kong.logrotate /etc/logrotate.d/kong
+
