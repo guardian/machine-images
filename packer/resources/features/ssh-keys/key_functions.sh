@@ -63,7 +63,7 @@ function install_ssh_key_for_user {
   >&2 echo "Overwriting user's authorized_keys file with downloaded file: ${CMD}"
   RESULT=`${CMD}` || ret=$?
   if [ ${ret} != 0 ]; then
-    >&2 echo "Error overwriting authorized_keys"
+    >&2 echo "Error overwriting authorized_keys. Has the downloaded file already been moved?"
     return 1
   fi
 }
