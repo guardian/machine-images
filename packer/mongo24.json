@@ -5,7 +5,8 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-9d2f0fea"
+    "euw1_source_ami": "ami-9d2f0fea",
+    "instance_profile": "packer-machine-images"
   },
   "builders": [
     {
@@ -19,6 +20,7 @@
       "ami_name": "mongo24_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for mongo24 built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "mongo24_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
@@ -39,6 +41,7 @@
       "ami_name": "mongo-opsmanager_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for mongo-opsmanager built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "mongo-opsmanager_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
@@ -59,6 +62,7 @@
       "ami_name": "mongo-opsmanager-server_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for mongo-opsmanager-server built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "mongo-opsmanager-server_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
