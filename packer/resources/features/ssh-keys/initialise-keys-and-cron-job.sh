@@ -17,6 +17,8 @@ function HELP {
 
     -b github-keys-bucket The bucket containing team github keys
 
+    -l Try to install keys cached in the machine image
+
     -h            Displays this help message. No further functions are
                   performed.
 
@@ -25,7 +27,7 @@ exit 1
 }
 
 # Process options
-while getopts u:t:b:h FLAG; do
+while getopts u:t:b:lh FLAG; do
   case $FLAG in
     u)
       SSH_USER=$OPTARG
@@ -36,6 +38,9 @@ while getopts u:t:b:h FLAG; do
     b)
       GITHUB_KEYS_BUCKET=$OPTARG
       ;;
+    l)
+      INSTALL_FROM_LOCAL=true
+    ;;
     h)  #show help
       HELP
       ;;
@@ -50,6 +55,13 @@ fi
 
 if [ -z "${SSH_USER}" ]; then
   SSH_USER="ubuntu"
+fi
+
+if [ ! -z "${INSTALL_FROM_LOCAL}" ]; then
+    # temporarily switch off exit on error so that if this step fails we still try to get keys from s3
+    set +e
+    ${DIR}/install-from-local.sh -t ${GITHUB_TEAM_NAME}
+    set -e
 fi
 
 ${DIR}/install.sh -t ${GITHUB_TEAM_NAME} -b ${GITHUB_KEYS_BUCKET}
