@@ -332,6 +332,17 @@
             "IpProtocol": "tcp",
             "FromPort": "8081",
             "ToPort": "8081",
+            "CidrIp": "10.248.153.0/25"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.153.128/26"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
             "CidrIp": "10.248.202.0/23"
           },{
             "IpProtocol": "tcp",
