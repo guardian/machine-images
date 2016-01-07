@@ -58,10 +58,8 @@ if [ -z "${SSH_USER}" ]; then
 fi
 
 if [ ! -z "${INSTALL_FROM_LOCAL}" ]; then
-    # temporarily switch off exit on error so that if this step fails we still try to get keys from s3
-    set +e
-    ${DIR}/install-from-local.sh -t ${GITHUB_TEAM_NAME}
-    set -e
+    # we add || true to ensure that if the installation from local fails we continue to try to fetch keys from s3
+    ${DIR}/install-from-local.sh -t ${GITHUB_TEAM_NAME} || true
 fi
 
 ${DIR}/install.sh -t ${GITHUB_TEAM_NAME} -b ${GITHUB_KEYS_BUCKET}
