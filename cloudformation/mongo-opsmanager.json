@@ -402,14 +402,14 @@
               "\n",
               [
                 "#!/bin/bash -ev",
-                
+
                 { "Fn::If" : [
                     "DoNotRetrieveSshKeysFromS3",
                     "# Not retrieving SSH keys from S3",
                     { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
                   ]
                 },
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", {"Ref":"DatabaseVolumeSize"}, " -d f -m /var/lib/mongodb -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
 
                 "/opt/features/mongo-opsmanager/agent-configure.sh"
               ]
