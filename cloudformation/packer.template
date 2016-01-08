@@ -58,8 +58,7 @@
                                "ec2:RebootInstances",
                                "ec2:TerminateInstances",
                                "ec2:DescribeInstances",
-                               "ec2:CreateTags",
-                               "ec2:DescribeVolumes"
+                               "ec2:CreateTags"
                            ],
                            "Effect": "Allow",
                            "Resource": [
