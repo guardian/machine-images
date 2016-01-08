@@ -51,10 +51,19 @@
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
     },
-    "IOPS": {
-      "Description": "IOPS to provision",
-      "Type": "Number",
-      "Default": "1000"
+    "EBSOptions": {
+      "Description": "Extra parameters to add-encrypted script",
+      "Type": "String",
+      "Default": "-t io1 -i 1000"
+    },
+    "InstanceType": {
+      "Description": "The instance type for the database nodes (typically smaller for prePROD)",
+      "Type": "String",
+      "AllowedValues": [
+        "m4.large",
+        "m4.xlarge",
+        "r3.xlarge"
+      ]
     }
   },
   "Conditions" : {
@@ -383,7 +392,7 @@
             "Ref": "ReplicationSecurityGroup"
           }
         ],
-        "InstanceType": "m4.large",
+        "InstanceType": { "Ref": "InstanceType" },
         "IamInstanceProfile": {
           "Ref": "ServerInstanceProfile"
         },
@@ -393,13 +402,15 @@
               "\n",
               [
                 "#!/bin/bash -ev",
+                
                 { "Fn::If" : [
                     "DoNotRetrieveSshKeysFromS3",
                     "# Not retrieving SSH keys from S3",
                     { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
                   ]
                 },
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref" : "DatabaseVolumeSize" }, " -d f -m /var/lib/mongodb -o 'defaults,noatime' -x  -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /var/lib/mongodb -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
+
                 "/opt/features/mongo-opsmanager/agent-configure.sh"
               ]
             ]
