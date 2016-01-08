@@ -66,6 +66,20 @@
                                "*"
                            ]
                        },
+                        {
+                           "Sid": "PackerVolumeAccess",
+                           "Action": [
+                               "ec2:AttachVolume",
+                               "ec2:CreateVolume",
+                               "ec2:DeleteVolume",
+                               "ec2:DescribeVolume*",
+                               "ec2:DetachVolume"
+                           ],
+                           "Effect": "Allow",
+                           "Resource": [
+                               "*"
+                           ]
+                        },
                        {
                            "Sid": "PackerKeyPairAccess",
                            "Action": [
