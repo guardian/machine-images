@@ -100,7 +100,7 @@ module MongoDB
     def find_replica_set(config, name)
       rs = config['replicaSets'].find{|rs| rs['_id'] == name}
       if rs.nil?
-        raise FatalError, "Cannot find replica set #{name} in existing configuration"
+        raise FatalError, "Cannot find replica set #{name} in existing configuration. Make sure replica set is imported for automation in Ops Manager."
       end
       rs
     end
