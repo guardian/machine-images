@@ -6,7 +6,7 @@
     "account_numbers": "",
     "build_branch": "DEV",
     "euw1_source_ami": "ami-9d2f0fea",
-    "instance_profile": "packer-machine-images"
+    "instance_profile": "PackerUser-PackerRole-19TWMDRWLA2T"
   },
   "builders": [
     {
