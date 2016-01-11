@@ -16,6 +16,14 @@ to get the lambda to start fetching keys for your team and to get your AWS accou
 have it already.
 
 Next, you should add a line to the UserData of your cloudformation template to call initialise-keys-and-cron-job.sh with
-the bucket name and your team name as parameters. For example:
+the bucket name and your team name as parameters. Depending on where in the boot script you are calling this feature, you
+may wish to add ` || true` on to the end of the command, to ensure that if this step fails (for instance if S3 is down),
+then the rest of the boot script will still be executed.
 
-    { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -b github-team-keys -t ", {"Ref":"GithubTeamName"}, "\n"] ] }
+For example: 
+
+    { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -b github-team-keys -t ", {"Ref":"GithubTeamName"}, " || true \n"] ] }
+
+You can also optionally include the `-l` parameter if you would like the script to initially try to install keys cached 
+in the machine image when it was created (these could be out of date, but would provide ssh access in case of an S3
+failure).
