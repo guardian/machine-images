@@ -60,7 +60,7 @@
     "GithubTeamName": {
       "Description": "Github team name, used for giving ssh accesss to members of the team.",
       "Type": "String",
-      "Default": ""
+      "Default": "OpsManager-SSHAccess"
     }
   },
   "Resources": {
