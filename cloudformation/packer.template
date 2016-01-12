@@ -141,6 +141,13 @@
                     }
                 } ]
             }
+        },
+        "PackerInstanceProfile" : {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [ {"Ref":"PackerRole"} ]
+            }
         }
     }
 }
