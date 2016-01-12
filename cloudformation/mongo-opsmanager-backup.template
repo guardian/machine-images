@@ -1,6 +1,6 @@
 {
   "AWSTemplateFormatVersion": "2010-09-09",
-  "Description": "MongoDB test stack",
+  "Description": "MongoDB OpsManager backup node",
   "Parameters": {
     "KeyName": {
       "Description": "The EC2 Key Pair to allow SSH access to the instance",
@@ -15,6 +15,25 @@
         "RELEASE",
         "PROD"
       ]
+    },
+    "Stack": {
+      "Description": "Stack name",
+      "Type": "String"
+    },
+    "SshKeyFileS3Url": {
+      "Description": "S3 URL for a list of public SSH keys to use for the default ubuntu user",
+      "Type": "String",
+      "Default": ""
+    },
+    "EBSOptions": {
+      "Description": "Extra parameters to add-encrypted script",
+      "Type": "String",
+      "Default": "-t io1 -i 1000"
+    },
+    "BackupVolumeSize": {
+      "Description": "Size of EBS volume for backup files (GB)",
+      "Type": "Number",
+      "Default": "100"
     },
     "VpcId": {
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
@@ -37,11 +56,6 @@
       "Description": "The KMS CMK to use to encrypt the EBS volume",
       "Type": "String"
     },
-    "IOPS": {
-      "Description": "IOPS to provision",
-      "Type": "Number",
-      "Default": "200"
-    },
     "SnapshotBackupBucketName": {
       "Description": "Bucket to store backup snapshots in",
       "Type": "String",
@@ -51,6 +65,11 @@
       "Description": "Bucket to store team public keys in (used to encrypt backup)",
       "Type": "String",
       "Default": "flex-mongo-snapshots-backup-public-keys"
+    }
+  },
+  "Conditions" : {
+    "DoNotRetrieveSshKeysFromS3" : {
+      "Fn::Equals" : [ {"Ref" : "SshKeyFileS3Url"}, "" ]
     }
   },
   "Resources": {
@@ -150,54 +169,6 @@
         "Roles": [{"Ref": "ServerRole"}]
       }
     },
-    "GetDistributablesPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetDistributablesPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                "arn:aws:s3:::composer-dist/*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
-    "GetConfigPolicy": {
-      "Type": "AWS::IAM::Policy",
-      "Properties": {
-        "PolicyName": "GetConfigPolicy",
-        "PolicyDocument": {
-          "Statement": [
-            {
-              "Effect": "Allow",
-              "Action": [
-                "s3:GetObject"
-              ],
-              "Resource": [
-                "arn:aws:s3:::guconf-flexible/*"
-              ]
-            }
-          ]
-        },
-        "Roles": [
-          {
-            "Ref": "ServerRole"
-          }
-        ]
-      }
-    },
     "GetBackupKeysPolicy": {
       "Type": "AWS::IAM::Policy",
       "Properties": {
@@ -291,12 +262,39 @@
                 "dynamodb:UpdateItem"
               ],
               "Resource": [
-                "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo-initialisation",
                 {
                   "Fn::Join": [
                     "",
                     [
-                      "arn:aws:dynamodb:eu-west-1:743583969668:table/mongo.rsconfig.flexible-db-",
+                      "arn:aws:dynamodb:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":table/mongo-initialisation"
+                    ]
+                  ]
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:dynamodb:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":",
+                      {
+                        "Ref": "AWS::AccountId"
+                      },
+                      ":table/mongo.rsconfig.",
+                      {
+                        "Ref": "Stack"
+                      },
+                      "-db-",
                       {
                         "Ref": "Stage"
                       }
@@ -374,6 +372,25 @@
         "HealthCheckGracePeriod": 300,
         "Tags": [
           {
+            "Key": "Name",
+            "Value": {
+              "Fn::Join": [
+                "",
+                [
+                  {
+                    "Ref": "Stage"
+                  },
+                  ":",
+                  {
+                    "Ref": "Stack"
+                  },
+                  "-db"
+                ]
+              ]
+            },
+            "PropagateAtLaunch": "true"
+          },
+          {
             "Key": "Stage",
             "Value": {
               "Ref": "Stage"
@@ -382,7 +399,7 @@
           },
           {
             "Key": "Stack",
-            "Value": "flexible",
+            "Value": { "Ref" : "Stack" },
             "PropagateAtLaunch": "true"
           },
           {
@@ -437,7 +454,15 @@
               "\n",
               [
                 "#!/bin/bash -ev",
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /backup -o 'defaults,noatime' -x  -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
+
+                { "Fn::If" : [
+                    "DoNotRetrieveSshKeysFromS3",
+                    "# Not retrieving SSH keys from S3",
+                    { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
+                  ]
+                },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", {"Ref":"BackupVolumeSize"}, " -d f -m /backup -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
+
                 "/opt/features/mongo-opsmanager/backup-agent-configure.sh",
                 { "Fn::Join": [ "", ["echo '*/30 * * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "' > /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"] ] },
                 "crontab -u mongo-backup /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"
