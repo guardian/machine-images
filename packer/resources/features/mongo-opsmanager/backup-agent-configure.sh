@@ -10,7 +10,7 @@ service set-readahead start
 OM_URL=$( ${SCRIPTPATH}/scripts/opsmanager_url.rb -a db)
 
 # Download and install automation agent
-PACKAGE=mongodb-mms-automation-agent-manager_2.0.12.1296-1_amd64.deb
+PACKAGE=mongodb-mms-automation-agent-manager_latest_amd64.deb
 pushd /tmp
 curl -OL ${OM_URL}/download/agent/automation/${PACKAGE}
 dpkg -i ${PACKAGE}

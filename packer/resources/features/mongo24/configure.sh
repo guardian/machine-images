@@ -31,7 +31,7 @@ ${SCRIPTPATH}/scripts/mongodb_add_self_to_replset.rb "$@"
 OM_URL=$( ${SCRIPTPATH}/../mongo-opsmanager/scripts/opsmanager_url.rb )
 
 # Download and install automation agent
-PACKAGE=mongodb-mms-automation-agent-manager_2.0.12.1296-1_amd64.deb
+PACKAGE=mongodb-mms-automation-agent-manager_latest_amd64.deb
 pushd /tmp
 curl -OL ${OM_URL}/download/agent/automation/${PACKAGE}
 dpkg -i ${PACKAGE}
