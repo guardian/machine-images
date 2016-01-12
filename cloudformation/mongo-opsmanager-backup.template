@@ -384,7 +384,7 @@
                   {
                     "Ref": "Stack"
                   },
-                  "-db"
+                  "-db_backup"
                 ]
               ]
             },
