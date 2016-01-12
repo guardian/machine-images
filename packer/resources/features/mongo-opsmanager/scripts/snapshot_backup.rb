@@ -91,11 +91,11 @@ def check_if_snapshot_new(snapshot_id)
 end
 
 def download_import_team_keys
-  keyring_document_key = 'flexbackupkeys.gpg'
+  keyring_document_key = 'backupkeys.gpg'
   logger.info("Downloading document #{keyring_document_key} from bucket #{@options.keys_bucket}")
   s3 = Aws::S3::Client.new
-  s3.get_object({bucket: @options.keys_bucket, key: keyring_document_key}, target: '/tmp/flexbackupkeys.gpg')
-  `gpg --homedir #{GPG_HOME_DIR} --import /tmp/flexbackupkeys.gpg`
+  s3.get_object({bucket: @options.keys_bucket, key: keyring_document_key}, target: '/tmp/backupkeys.gpg')
+  `gpg --homedir #{GPG_HOME_DIR} --import /tmp/backupkeys.gpg`
 end
 
 def generate_gpg_command(filename)
