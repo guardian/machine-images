@@ -84,7 +84,6 @@
     {
       "type": "shell",
       "inline": [
-        "/usr/bin/sudo -E /bin/bash -x /opt/features/gnm-dns/install.sh",
         "/bin/sleep 2",
         "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo24/install.sh"
       ],
