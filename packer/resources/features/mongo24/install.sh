@@ -35,3 +35,6 @@ install -m 755 ${SCRIPTPATH}/../mongo-opsmanager/templates/set-readahead /etc/in
 update-rc.d set-readahead defaults
 
 echo "net.ipv4.tcp_keepalive_time = 300" > /etc/sysctl.d/71-tcp-keepalive.conf
+
+# install memory/swap/disk usage monitoring agent
+${SCRIPTPATH}/../cloudwatch-monitoring/install.sh -d/,/var/lib/mongodb

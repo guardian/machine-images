@@ -26,3 +26,6 @@ install -m 755 ${SCRIPTPATH}/templates/set-readahead /etc/init.d/set-readahead
 update-rc.d set-readahead defaults
 
 echo "net.ipv4.tcp_keepalive_time = 300" > /etc/sysctl.d/71-tcp-keepalive.conf
+
+# install memory/swap/disk usage monitoring agent
+${SCRIPTPATH}/../cloudwatch-monitoring/install.sh -d/,/var/lib/mongodb
