@@ -26,6 +26,15 @@
         "PROD"
       ]
     },
+    "VPCCIDR" : {
+      "Type" : "String",
+      "Description" : "IP Address range for the VPC",
+      "MinLength": "9",
+      "MaxLength": "18",
+      "Default": "10.0.0.0/8",
+      "AllowedPattern": "(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})\\.(\\d{1,3})/(\\d{1,2})",
+      "ConstraintDescription": "must be a valid IP CIDR range of the form x.x.x.x/x."
+    },
     "Stack": {
       "Description": "Stack name",
       "Type": "String"
@@ -294,7 +303,7 @@
             "IpProtocol": "tcp",
             "FromPort": "22",
             "ToPort": "22",
-            "CidrIp": "10.0.0.0/8"
+            "CidrIp": {"Ref": "VPCCIDR"}
           }
         ]
       }
@@ -311,7 +320,7 @@
             "IpProtocol": "tcp",
             "FromPort": "27017",
             "ToPort": "27017",
-            "CidrIp": "10.0.0.0/8"
+            "CidrIp": {"Ref": "VPCCIDR"}
           }
         ]
       }
