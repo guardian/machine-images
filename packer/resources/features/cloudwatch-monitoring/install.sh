@@ -37,7 +37,7 @@ function install_cloudwatch_client() {
 function generate_cloudwatch_cron_job() {
   local SCRIPT_PATH=$1
   local DISK_PATHS=$2
-  local CRON_CMD="${SCRIPT_PATH} --from-cron --mem-util --mem-used --mem-avail --swap-util --swap-used"
+  local CRON_CMD="${SCRIPT_PATH} --from-cron --auto-scaling --mem-util --mem-used --mem-avail --swap-util --swap-used"
   if [ "x${DISK_PATHS}" != "x" ]; then
     CRON_CMD="${CRON_CMD} --disk-space-util --disk-space-used --disk-space-avail"
     for D in $(echo $DISK_PATHS | tr ',' '\n'); do
