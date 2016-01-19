@@ -16,6 +16,25 @@
       "Type": "Number",
       "Default": "100"
     },
+    "DiskSpaceUtilisationAlertThreshold": {
+      "Description": "Percentage of disk utilisation to trigger an alert for. E.g. 50 for alerting when any disk is at >= 50% capacity.",
+      "Type": "Number",
+      "MinValue": 10,
+      "MaxValue": 100,
+      "Default": 50
+    },
+    "MemoryUtilisationAlertThreshold": {
+      "Description": "Percentage of memory utilisation to trigger an alert for within 5 minute period. E.g. 90 for alerting when memory is at >= 90% for 5 minutes.",
+      "Type": "Number",
+      "MinValue": 10,
+      "MaxValue": 100,
+      "Default": 90
+    },
+    "MongoPagerDutyEndPoint": {
+      "Description": "PagerDuty HTTPS end-point to use for alerting",
+      "Type": "String",
+      "AllowedPattern": "https:\/\/.*"
+    },
     "Stage": {
       "Description": "Environment name",
       "Type": "String",
@@ -72,6 +91,58 @@
     }
   },
   "Resources": {
+    "AlarmHighDataDiskSpaceUtilisation": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "MongoDB: Too high disk utilisation on /var/lib/mongodb for a 5 minute period",
+        "Namespace": "System/Linux",
+        "MetricName": "DiskSpaceUtilization",
+        "Statistic": "Maximum",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Threshold": {"Ref": "DiskSpaceUtilisationAlertThreshold"},
+        "Period": "300",
+        "EvaluationPeriods": "1",
+        "AlarmActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "Dimensions": [
+          {"Name": "MountPath", "Value": "/var/lib/mongodb"},
+          {"Name": "Filesystem", "Value": "/dev/xvdf"},
+          {"Name": "AutoScalingGroupName", "Value": {"Ref": "AutoscalingGroup"}}
+        ]
+      }
+    },
+    "AlarmHighMemoryUtilization": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "AlarmDescription": "MongoDB: Memory utilisation has been unusually high in the last 5 minutes",
+        "Namespace": "System/Linux",
+        "MetricName": "MemoryUtilization",
+        "Statistic": "Maximum",
+        "ComparisonOperator": "GreaterThanOrEqualToThreshold",
+        "Threshold": {"Ref": "MemoryUtilisationAlertThreshold"},
+        "Period": "300",
+        "EvaluationPeriods": "1",
+        "AlarmActions": [
+          { "Ref": "TopicPagerDutyAlerts"}
+        ],
+        "Dimensions": [
+          {"Name": "AutoScalingGroupName", "Value": {"Ref": "AutoscalingGroup"}}
+        ]
+      }
+    },
+    "TopicPagerDutyAlerts": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "DisplayName": { "Fn::Join": ["-", ["MongoPagerDutyEndPoint", {"Ref": "Stage"}, {"Ref": "Stack"}]] },
+        "Subscription": [
+          {
+            "Endpoint": {"Ref": "MongoPagerDutyEndPoint"},
+            "Protocol": "https"
+          }
+        ]
+      }
+    },
     "ServerInstanceProfile": {
       "Type": "AWS::IAM::InstanceProfile",
       "Properties": {
