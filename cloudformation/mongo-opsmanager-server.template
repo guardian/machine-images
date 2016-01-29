@@ -51,6 +51,11 @@
       "Description": "ARN of the SSL certificate for *.gutools.co.uk",
       "Type": "String",
       "Default": "arn:aws:iam::743583969668:server-certificate/sites.gutools.co.uk-exp2015-10-20"
+    },
+    "PagerDutyEndPoint": {
+      "Description": "PagerDuty HTTPS end-point to use for alerting",
+      "Type": "String",
+      "AllowedPattern": "https:\/\/.*"
     }
   },
   "Resources": {
@@ -214,6 +219,19 @@
       }
     },
 
+    "TopicPagerDutyAlerts": {
+      "Type": "AWS::SNS::Topic",
+      "Properties": {
+        "DisplayName": "OpsManagerPagerDutyAlerts",
+        "Subscription": [
+          {
+            "Endpoint": {"Ref": "PagerDutyEndPoint"},
+            "Protocol": "https"
+          }
+        ]
+      }
+    },
+
     "SSHSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -321,6 +339,30 @@
         ]
       }
     },
+    "InsufficientHealthyHostsAlarmMMS": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmDescription": "There are insufficient healthy hosts for OpsManager MMS",
+        "ComparisonOperator": "LessThanThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "HealthyHostCount",
+        "Namespace": "AWS/ELB",
+        "Period": "60",
+        "Statistic": "Average",
+        "Threshold": {"Ref":"Size"},
+        "AlarmActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "InsufficientDataActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "OKActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "Dimensions": [ { "Name": "LoadBalancerName", "Value": { "Ref": "MMSLoadBalancer" } } ]
+      }
+    },
 
     "BackupLoadBalancerSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
@@ -378,6 +420,30 @@
         "SecurityGroups": [
           { "Ref": "BackupLoadBalancerSecurityGroup" }
         ]
+      }
+    },
+    "InsufficientHealthyHostsAlarmBackup": {
+      "Type": "AWS::CloudWatch::Alarm",
+      "Properties": {
+        "ActionsEnabled": "true",
+        "AlarmDescription": "There are insufficient healthy hosts for OpsManager Backup HTTP server",
+        "ComparisonOperator": "LessThanThreshold",
+        "EvaluationPeriods": "1",
+        "MetricName": "HealthyHostCount",
+        "Namespace": "AWS/ELB",
+        "Period": "60",
+        "Statistic": "Average",
+        "Threshold": {"Ref":"Size"},
+        "AlarmActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "InsufficientDataActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "OKActions": [
+          { "Ref": "TopicPagerDutyAlerts" }
+        ],
+        "Dimensions": [ { "Name": "LoadBalancerName", "Value": { "Ref": "BackupLoadBalancer" } } ]
       }
     },
 
