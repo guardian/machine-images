@@ -11,6 +11,19 @@
       "Type": "String",
       "Default": ""
     },
+    "SSHAccessCIDR": {
+      "Description": "IP address range allowed to SSH to the MongoDB instances",
+      "Type": "String",
+      "Default": "10.0.0.0/8"
+    },
+    "ReplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup::GroupName",
+      "Description": "Security group allowed to access port 27017 for replication"
+    },
+    "ClientSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup::GroupName",
+      "Description": "Security group allowed to access port 27017 as clients"
+    },
     "DatabaseVolumeSize": {
       "Description": "Size of EBS volume for MongoDB data files (GB)",
       "Type": "Number",
@@ -365,24 +378,7 @@
             "IpProtocol": "tcp",
             "FromPort": "22",
             "ToPort": "22",
-            "CidrIp": "10.0.0.0/8"
-          }
-        ]
-      }
-    },
-    "ReplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "GroupDescription": "Allow connections to mongo DB",
-        "VpcId": {
-          "Ref": "VpcId"
-        },
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "27017",
-            "ToPort": "27017",
-            "CidrIp": "10.0.0.0/8"
+            "CidrIp": { "Ref": "SSHAccessCIDR"}
           }
         ]
       }
@@ -461,6 +457,9 @@
           },
           {
             "Ref": "ReplicationSecurityGroup"
+          },
+          {
+            "Ref": "ClientSecurityGroup"
           }
         ],
         "InstanceType": { "Ref": "InstanceType" },

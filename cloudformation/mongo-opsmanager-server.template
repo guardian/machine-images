@@ -20,6 +20,15 @@
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
       "Type": "AWS::EC2::VPC::Id"
     },
+    "SSHAccessCIDR": {
+      "Description": "IP address range allowed to SSH to the OpsManager instances",
+      "Type": "String",
+      "Default": "10.0.0.0/8"
+    },
+    "BackupLoadBalancerSecurityGroups": {
+      "Type": "List<AWS::EC2::SecurityGroup::GroupName>",
+      "Description": "Security groups allowed access the backup API"
+    },
     "PrivateVpcSubnets": {
       "Description": "Subnets to use in VPC for private EC2 instances eg. subnet-abcd1234",
       "Type": "List<AWS::EC2::Subnet::Id>"
@@ -244,7 +253,7 @@
             "IpProtocol": "tcp",
             "FromPort": "22",
             "ToPort": "22",
-            "CidrIp": "10.0.0.0/8"
+            "CidrIp": { "Ref": "SSHAccessCIDR" }
           }
         ]
       }
@@ -284,7 +293,7 @@
             "IpProtocol": "tcp",
             "FromPort": "8080",
             "ToPort": "8081",
-            "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroup" }
+            "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroups" }
           }
         ]
       }
@@ -300,7 +309,7 @@
             "IpProtocol": "tcp",
             "FromPort": "443",
             "ToPort": "443",
-            "CidrIp": "0.0.0.0/0"
+            "CidrIp": "10.0.0.0/8"
           }
         ],
         "SecurityGroupEgress": [
@@ -362,41 +371,7 @@
         ],
         "Dimensions": [ { "Name": "LoadBalancerName", "Value": { "Ref": "MMSLoadBalancer" } } ]
       }
-    },
-
-    "BackupLoadBalancerSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "VpcId": { "Ref": "VpcId" },
-        "GroupDescription": "Allow access to backup endpoint on internal ELB",
-        "SecurityGroupIngress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8081",
-            "ToPort": "8081",
-            "CidrIp": "10.248.202.0/23"
-          },{
-            "IpProtocol": "tcp",
-            "FromPort": "8081",
-            "ToPort": "8081",
-            "CidrIp": "10.248.204.0/23"
-          },{
-            "IpProtocol": "tcp",
-            "FromPort": "8081",
-            "ToPort": "8081",
-            "CidrIp": "10.248.206.0/23"
-          }
-        ],
-        "SecurityGroupEgress": [
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8081",
-            "CidrIp": "0.0.0.0/0"
-          }
-        ]
-      }
-    },
+  },
     "BackupLoadBalancer": {
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
@@ -418,7 +393,7 @@
         },
         "Subnets": { "Ref": "PrivateVpcSubnets" },
         "SecurityGroups": [
-          { "Ref": "BackupLoadBalancerSecurityGroup" }
+          { "Ref": "BackupLoadBalancerSecurityGroups" }
         ]
       }
     },
