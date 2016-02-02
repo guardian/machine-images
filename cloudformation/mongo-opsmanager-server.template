@@ -67,6 +67,24 @@
       "AllowedPattern": "https:\/\/.*"
     }
   },
+  "Mappings": {
+    "OpsManagerVPCSubnets" : {
+      "Private1A": {
+        "CIDR": "10.248.53.0/26"
+      },
+      "Private1B": {
+        "CIDR": "10.248.53.64/26"
+      },
+      "Private1C": {
+        "CIDR": "10.248.53.128/26"
+      }
+    },
+    "GNMNetworks": {
+      "Office": {
+        "CIDR": "10.249.0.0/16"
+      }
+    }
+  },
   "Resources": {
     "ServerInstanceProfile": {
       "Type": "AWS::IAM::InstanceProfile",
@@ -293,7 +311,19 @@
             "IpProtocol": "tcp",
             "FromPort": "8080",
             "ToPort": "8081",
-            "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroups" }
+            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1A", "CIDR" ] }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8081",
+            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1B", "CIDR" ] }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8081",
+            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1C", "CIDR" ] }
           }
         ]
       }
@@ -309,7 +339,7 @@
             "IpProtocol": "tcp",
             "FromPort": "443",
             "ToPort": "443",
-            "CidrIp": "10.0.0.0/8"
+            "CidrIp": { "Fn::FindInMap": [ "GNMNetworks", "Office", "CIDR" ] }
           }
         ],
         "SecurityGroupEgress": [
@@ -317,7 +347,19 @@
             "IpProtocol": "tcp",
             "FromPort": "8080",
             "ToPort": "8080",
-            "CidrIp": "0.0.0.0/0"
+            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1A", "CIDR" ] }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8080",
+            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1B", "CIDR" ] }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8080",
+            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1C", "CIDR" ] }
           }
         ]
       }
@@ -392,9 +434,7 @@
           "HealthyThreshold": "2"
         },
         "Subnets": { "Ref": "PrivateVpcSubnets" },
-        "SecurityGroups": [
-          { "Ref": "BackupLoadBalancerSecurityGroups" }
-        ]
+        "SecurityGroups": { "Ref": "BackupLoadBalancerSecurityGroups" }
       }
     },
     "InsufficientHealthyHostsAlarmBackup": {
