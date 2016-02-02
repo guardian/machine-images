@@ -27,7 +27,7 @@
     "SSHAccessCIDR": {
       "Description": "IP address range allowed to SSH to the MongoDB instances",
       "Type": "String",
-      "Default": "10.0.0.0/8"
+      "Default": "10.249.0.0/16"
     },
     "ReplicationSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup::GroupName",
