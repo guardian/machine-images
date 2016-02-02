@@ -341,11 +341,11 @@
     "OpsManagerReplicationSecurityGroupIngress": {
       "Type": "AWS::EC2::SecurityGroupIngress",
       "Properties": {
-        "GroupId": { "Ref": "ReplicationSecurityGroup" },
+        "GroupId": { "Ref": "OpsManagerReplicationSecurityGroup" },
         "IpProtocol": "tcp",
         "FromPort": "27017",
         "ToPort": "27018",
-        "SourceSecurityGroupId": { "Ref": "ReplicationSecurityGroup" }
+        "SourceSecurityGroupId": { "Ref": "OpsManagerReplicationSecurityGroup" }
       }
     },
 
