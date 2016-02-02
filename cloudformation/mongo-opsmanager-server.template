@@ -329,6 +329,26 @@
       }
     },
 
+    "OpsManagerReplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow connections between OpsManager MongoDB instances",
+        "VpcId": {
+          "Ref": "VpcId"
+        }
+      }
+    },
+    "OpsManagerReplicationSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Ref": "ReplicationSecurityGroup" },
+        "IpProtocol": "tcp",
+        "FromPort": "27017",
+        "ToPort": "27018",
+        "SourceSecurityGroupId": { "Ref": "ReplicationSecurityGroup" }
+      }
+    },
+
     "MMSLoadBalancerSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -515,7 +535,8 @@
         "SecurityGroups": [
           { "Ref": "SSHSecurityGroup" },
           { "Ref": "ReplicationSecurityGroup" },
-          { "Ref": "ServerLoadBalancerSecurityGroup"}
+          { "Ref": "ServerLoadBalancerSecurityGroup" },
+          { "Ref": "OpsManagerReplicationSecurityGroup" }
         ],
         "InstanceType": "r3.xlarge",
         "IamInstanceProfile": {
