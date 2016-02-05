@@ -30,11 +30,11 @@
       "Default": "10.249.0.0/16"
     },
     "ReplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::GroupName",
+      "Type": "AWS::EC2::SecurityGroup::Id",
       "Description": "Security group allowed to access port 27017 for replication"
     },
     "ClientSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::GroupName",
+      "Type": "AWS::EC2::SecurityGroup::Id",
       "Description": "Security group allowed to access port 27017 as clients"
     },
     "VpcId": {
