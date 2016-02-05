@@ -5,7 +5,8 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-4aa8ea3d"
+    "euw1_source_ami": "ami-4aa8ea3d",
+    "instance_profile": "packer-machine-images"
   },
   "builders": [
     {
@@ -19,6 +20,7 @@
       "ami_name": "elk-stack_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
       "ami_description": "AMI for elk-stack built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
       "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "elk-stack_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "BuildName": "{{user `build_name`}}",
