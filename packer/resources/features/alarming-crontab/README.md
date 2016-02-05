@@ -1,3 +1,5 @@
+# Alarming crontab feature
+
 This feature adds a set of scripts that can be used to easily create a new
 cronjob that will trigger an incident in PagerDuty if the command in the cronjob
  exits with a non-zero status.
