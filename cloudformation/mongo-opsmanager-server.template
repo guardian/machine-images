@@ -20,15 +20,6 @@
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
       "Type": "AWS::EC2::VPC::Id"
     },
-    "SSHAccessCIDR": {
-      "Description": "IP address range allowed to SSH to the OpsManager instances",
-      "Type": "String",
-      "Default": "10.249.0.0/16"
-    },
-    "BackupLoadBalancerSecurityGroups": {
-      "Type": "List<AWS::EC2::SecurityGroup::Id>",
-      "Description": "Security groups allowed access the backup API"
-    },
     "PrivateVpcSubnets": {
       "Description": "Subnets to use in VPC for private EC2 instances eg. subnet-abcd1234",
       "Type": "List<AWS::EC2::Subnet::Id>"
@@ -65,24 +56,11 @@
       "Description": "PagerDuty HTTPS end-point to use for alerting",
       "Type": "String",
       "AllowedPattern": "https:\/\/.*"
-    }
-  },
-  "Mappings": {
-    "OpsManagerVPCSubnets" : {
-      "Private1A": {
-        "CIDR": "10.248.53.0/26"
-      },
-      "Private1B": {
-        "CIDR": "10.248.53.64/26"
-      },
-      "Private1C": {
-        "CIDR": "10.248.53.128/26"
-      }
     },
-    "GNMNetworks": {
-      "Office": {
-        "CIDR": "10.249.0.0/16"
-      }
+    "GithubTeamName": {
+      "Description": "Github team name, used for giving ssh accesss to members of the team.",
+      "Type": "String",
+      "Default": "OpsManager-SSHAccess"
     }
   },
   "Resources": {
@@ -148,6 +126,27 @@
             "Ref": "ServerRole"
           }
         ]
+      }
+    },
+    "GetTeamKeysPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GetTeamKeysPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject"],
+              "Resource": ["arn:aws:s3:::github-team-keys/*"]
+            },
+            {
+              "Effect":"Allow",
+              "Action": ["s3:ListBucket"],
+              "Resource":"arn:aws:s3:::github-team-keys"
+            }
+          ]
+        },
+        "Roles": [{"Ref": "ServerRole"}]
       }
     },
     "CreateEncryptedVolumePolicy": {
@@ -271,7 +270,7 @@
             "IpProtocol": "tcp",
             "FromPort": "22",
             "ToPort": "22",
-            "CidrIp": { "Ref": "SSHAccessCIDR" }
+            "CidrIp": "10.0.0.0/8"
           }
         ]
       }
@@ -311,41 +310,9 @@
             "IpProtocol": "tcp",
             "FromPort": "8080",
             "ToPort": "8081",
-            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1A", "CIDR" ] }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8081",
-            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1B", "CIDR" ] }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8081",
-            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1C", "CIDR" ] }
+            "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroup" }
           }
         ]
-      }
-    },
-
-    "OpsManagerReplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup",
-      "Properties": {
-        "GroupDescription": "Allow connections between OpsManager MongoDB instances",
-        "VpcId": {
-          "Ref": "VpcId"
-        }
-      }
-    },
-    "OpsManagerReplicationSecurityGroupIngress": {
-      "Type": "AWS::EC2::SecurityGroupIngress",
-      "Properties": {
-        "GroupId": { "Ref": "OpsManagerReplicationSecurityGroup" },
-        "IpProtocol": "tcp",
-        "FromPort": "27017",
-        "ToPort": "27018",
-        "SourceSecurityGroupId": { "Ref": "OpsManagerReplicationSecurityGroup" }
       }
     },
 
@@ -359,7 +326,7 @@
             "IpProtocol": "tcp",
             "FromPort": "443",
             "ToPort": "443",
-            "CidrIp": { "Fn::FindInMap": [ "GNMNetworks", "Office", "CIDR" ] }
+            "CidrIp": "0.0.0.0/0"
           }
         ],
         "SecurityGroupEgress": [
@@ -367,19 +334,7 @@
             "IpProtocol": "tcp",
             "FromPort": "8080",
             "ToPort": "8080",
-            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1A", "CIDR" ] }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8080",
-            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1B", "CIDR" ] }
-          },
-          {
-            "IpProtocol": "tcp",
-            "FromPort": "8080",
-            "ToPort": "8080",
-            "CidrIp": { "Fn::FindInMap": [ "OpsManagerVPCSubnets", "Private1C", "CIDR" ] }
+            "CidrIp": "0.0.0.0/0"
           }
         ]
       }
@@ -433,7 +388,41 @@
         ],
         "Dimensions": [ { "Name": "LoadBalancerName", "Value": { "Ref": "MMSLoadBalancer" } } ]
       }
-  },
+    },
+
+    "BackupLoadBalancerSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": { "Ref": "VpcId" },
+        "GroupDescription": "Allow access to backup endpoint on internal ELB",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.202.0/23"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.204.0/23"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "8081",
+            "ToPort": "8081",
+            "CidrIp": "10.248.206.0/23"
+          }
+        ],
+        "SecurityGroupEgress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "8080",
+            "ToPort": "8081",
+            "CidrIp": "0.0.0.0/0"
+          }
+        ]
+      }
+    },
     "BackupLoadBalancer": {
       "Type": "AWS::ElasticLoadBalancing::LoadBalancer",
       "Properties": {
@@ -454,7 +443,9 @@
           "HealthyThreshold": "2"
         },
         "Subnets": { "Ref": "PrivateVpcSubnets" },
-        "SecurityGroups": { "Ref": "BackupLoadBalancerSecurityGroups" }
+        "SecurityGroups": [
+          { "Ref": "BackupLoadBalancerSecurityGroup" }
+        ]
       }
     },
     "InsufficientHealthyHostsAlarmBackup": {
@@ -535,8 +526,7 @@
         "SecurityGroups": [
           { "Ref": "SSHSecurityGroup" },
           { "Ref": "ReplicationSecurityGroup" },
-          { "Ref": "ServerLoadBalancerSecurityGroup" },
-          { "Ref": "OpsManagerReplicationSecurityGroup" }
+          { "Ref": "ServerLoadBalancerSecurityGroup"}
         ],
         "InstanceType": "r3.xlarge",
         "IamInstanceProfile": {
@@ -548,10 +538,12 @@
               "\n",
               [
                 "#!/bin/bash -ev",
+                { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -b github-team-keys -t ", {"Ref":"GithubTeamName"}, " || true\n"] ] },
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSVolumeSize" }, " -d f -m /var/lib/mongodb/application -o 'defaults,noatime' -x -u mongodb -i ", { "Ref": "IOPS" }, " -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSVolumeSize" }, " -d g -m /var/lib/mongodb/blockstore -o 'defaults,noatime' -x -u mongodb -i ", { "Ref": "IOPS" }, " -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSVolumeSize" }, " -d h -m /var/lib/mongodb/backup -o 'defaults,noatime' -x -u mongodb-mms -i ", { "Ref": "IOPS" }, " -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
                 "/opt/features/mongo-opsmanager/server-configure.sh"
+
               ]
             ]
           }
