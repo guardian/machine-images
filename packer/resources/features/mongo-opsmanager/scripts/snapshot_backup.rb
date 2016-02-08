@@ -112,7 +112,7 @@ def download_encrypt_backup(download_link)
   # download the file
   file_name=download_link.split('/')[-1] + '.gpg'
   gpg_command = generate_gpg_command(file_name)
-  download_encrypt_command = "curl #{download_link} | #{gpg_command}"
+  download_encrypt_command = "curl -H 'Connection: keep-alive' --compressed -v --keepalive-time 2 #{download_link} | #{gpg_command}"
   logger.info("Downloading and encrypting using command #{download_encrypt_command}.")
   `#{download_encrypt_command}`
   file_name

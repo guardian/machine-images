@@ -15,8 +15,9 @@ To use this feature you'll first need to follow the steps [here](https://github.
 to get the lambda to start fetching keys for your team and to get your AWS account access to the bucket if it doesn't 
 have it already.
 
-Next, you should add a line to the UserData of your cloudformation template to call initialise-keys-and-cron-job.sh with
-the bucket name and your team name as parameters. Depending on where in the boot script you are calling this feature, you
+Next, you'll need to modify your cloudformation template to get access to the bucket and enable the feature. See [here](https://github.com/guardian/composer-snapshotter/pull/52/files) for an example of how to do this.
+
+Note: the required parameters initialise-keys-and-cron-job.sh when you're enabling the feature are -b <bucket name> and -t <team name>. Depending on where in the boot script you are calling this feature, you
 may wish to add ` || true` on to the end of the command, to ensure that if this step fails (for instance if S3 is down),
 then the rest of the boot script will still be executed.
 
