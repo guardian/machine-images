@@ -25,6 +25,11 @@
       "Type": "String",
       "Default": ""
     },
+    "SSHAccessCIDR": {
+      "Description": "IP address range allowed to SSH to the backup instances",
+      "Type": "String",
+      "Default": "10.249.0.0/16"
+    },
     "EBSOptions": {
       "Description": "Extra parameters to add-encrypted script",
       "Type": "String",
@@ -346,7 +351,7 @@
             "IpProtocol": "tcp",
             "FromPort": "22",
             "ToPort": "22",
-            "CidrIp": "10.0.0.0/8"
+            "CidrIp": { "Ref": "SSHAccessCIDR" }
           }
         ]
       }
