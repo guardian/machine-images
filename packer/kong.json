@@ -23,6 +23,7 @@
       "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "kong_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "ImageName": "kong",
         "BuildName": "{{user `build_name`}}",
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",

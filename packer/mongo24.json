@@ -23,6 +23,7 @@
       "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "mongo24_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "ImageName": "mongo24",
         "BuildName": "{{user `build_name`}}",
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",
@@ -44,6 +45,7 @@
       "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "mongo-opsmanager_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "ImageName": "mongo-opsmanager",
         "BuildName": "{{user `build_name`}}",
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",
@@ -65,6 +67,7 @@
       "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
         "Name": "mongo-opsmanager-server_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "ImageName": "mongo-opsmanager-server",
         "BuildName": "{{user `build_name`}}",
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",
