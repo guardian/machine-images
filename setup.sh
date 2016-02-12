@@ -6,7 +6,7 @@ SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 PACKER_DIR="${SCRIPTPATH}/packer_bin"
 
 PLATFORM=$(uname)
-PACKER_VERSION="0.8.2"
+PACKER_VERSION="0.8.6"
 
 if [ -x "${PACKER_DIR}/packer" ]; then
   if ${PACKER_DIR}/packer version | grep "Packer v${PACKER_VERSION}" >/dev/null 2>&1
@@ -21,10 +21,10 @@ fi
 
 case "$PLATFORM" in
   Darwin)
-    PACKER_URI="https://dl.bintray.com/mitchellh/packer/packer_${PACKER_VERSION}_darwin_amd64.zip"
+    PACKER_URI="https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_darwin_amd64.zip"
     ;;
   Linux)
-    PACKER_URI="https://dl.bintray.com/mitchellh/packer/packer_${PACKER_VERSION}_linux_amd64.zip"
+    PACKER_URI="https://releases.hashicorp.com/packer/${PACKER_VERSION}/packer_${PACKER_VERSION}_linux_amd64.zip"
     ;;
   *)
     echo "Unknown OS, please install packer yourself"
