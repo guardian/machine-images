@@ -13,7 +13,9 @@
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "relatime"],
       "chroot_mounts": [
-        ["bind", "/lib/modules/", "/lib/modules/"]
+        ["bind", "/lib/modules/", "/lib/modules/"],
+        ["proc", "proc", "/proc"],
+        ["bind", "/dev", "/dev"]
       ],
       "access_key": "{{user `aws_access_key`}}",
       "secret_key": "{{user `aws_secret_key`}}",
@@ -36,7 +38,9 @@
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "relatime"],
       "chroot_mounts": [
-        ["bind", "/lib/modules/", "/lib/modules/"]
+        ["bind", "/lib/modules/", "/lib/modules/"],
+        ["proc", "proc", "/proc"],
+        ["bind", "/dev", "/dev"]
       ],
       "region": "eu-west-1",
       "access_key": "{{user `aws_access_key`}}",
@@ -59,7 +63,9 @@
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "relatime"],
       "chroot_mounts": [
-        ["bind", "/lib/modules/", "/lib/modules/"]
+        ["bind", "/lib/modules/", "/lib/modules/"],
+        ["proc", "proc", "/proc"],
+        ["bind", "/dev", "/dev"]
       ],
       "region": "eu-west-1",
       "access_key": "{{user `aws_access_key`}}",
