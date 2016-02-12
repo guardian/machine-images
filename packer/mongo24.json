@@ -89,6 +89,12 @@
       ]
     },
     {
+      "type": "shell",
+      "inline": [
+        "echo 'Acquire::http { Proxy \"http://127.0.0.1:3142\"; };' > /etc/apt/conf.d/01proxy"
+      ]
+    },
+    {
       "type": "file",
       "source": "resources/features",
       "destination": "/tmp"
