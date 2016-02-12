@@ -11,7 +11,7 @@
     {
       "name": "mongo24",
       "type": "amazon-chroot",
-      "mount_options": ["noatime", "nodiratime", "relatime"],
+      "mount_options": ["noatime", "nodiratime", "norelatime"],
       "chroot_mounts": [
         ["bind", "/lib/modules/", "/lib/modules/"],
         ["proc", "proc", "/proc"],
@@ -36,7 +36,7 @@
     {
       "name": "mongo-opsmanager",
       "type": "amazon-chroot",
-      "mount_options": ["noatime", "nodiratime", "relatime"],
+      "mount_options": ["noatime", "nodiratime", "norelatime"],
       "chroot_mounts": [
         ["bind", "/lib/modules/", "/lib/modules/"],
         ["proc", "proc", "/proc"],
@@ -61,7 +61,7 @@
     {
       "name": "mongo-opsmanager-server",
       "type": "amazon-chroot",
-      "mount_options": ["noatime", "nodiratime", "relatime"],
+      "mount_options": ["noatime", "nodiratime", "norelatime"],
       "chroot_mounts": [
         ["bind", "/lib/modules/", "/lib/modules/"],
         ["proc", "proc", "/proc"],
