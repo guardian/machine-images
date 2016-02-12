@@ -13,7 +13,7 @@
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "norelatime"],
       "chroot_mounts": [
-        ["bind", "/lib/modules/", "/lib/modules/"],
+        ["bind", "/lib/modules", "/lib/modules"],
         ["proc", "proc", "/proc"],
         ["bind", "/dev", "/dev"]
       ],
@@ -38,7 +38,7 @@
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "norelatime"],
       "chroot_mounts": [
-        ["bind", "/lib/modules/", "/lib/modules/"],
+        ["bind", "/lib/modules", "/lib/modules"],
         ["proc", "proc", "/proc"],
         ["bind", "/dev", "/dev"]
       ],
@@ -63,7 +63,7 @@
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "norelatime"],
       "chroot_mounts": [
-        ["bind", "/lib/modules/", "/lib/modules/"],
+        ["bind", "/lib/modules", "/lib/modules"],
         ["proc", "proc", "/proc"],
         ["bind", "/dev", "/dev"]
       ],
