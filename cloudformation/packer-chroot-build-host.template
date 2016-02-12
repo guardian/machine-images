@@ -1,0 +1,131 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "Build host for packer-chroot",
+  "Parameters": {
+    "KeyName": {
+      "Description": "The EC2 Key Pair to allow SSH access to the instances",
+      "Type": "AWS::EC2::KeyPair::KeyName"
+    },
+    "AmiId": {
+      "Description": "Custom AMI to use for instances, created using Packer",
+      "Type": "String",
+      "Default": "ami-bf72c4cc"
+    },
+    "VpcId": {
+      "Description": "ID of the VPC onto which to launch the build host",
+      "Type": "AWS::EC2::VPC::Id"
+    },
+    "InstanceType": {
+      "Description": "EC2 instance type",
+      "Type": "String",
+      "AllowedValues": [
+        "m4.2xlarge",
+        "m4.large"
+      ],
+      "ConstraintDescription": "must be a valid EC2 instance type."
+    },
+    "MaxInstances" : {
+      "Description": "Maximum number of instances. This should be (at least) double the desired capacity.",
+      "Type": "Number",
+      "Default": 1
+    },
+    "MinInstances" : {
+      "Description": "Minimum number of instances",
+      "Type": "Number",
+      "Default": 1
+    }
+  },
+  "Resources": {
+    "ServerRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "ec2.amazonaws.com" ]
+            },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Path": "/",
+        "Policies": [ {
+          "PolicyName": "root",
+          "PolicyDocument": {
+            "Statement": [
+              {
+                "Effect": "Allow",
+                "Action": "ec2:DescribeTags",
+                "Resource": "*"
+              }
+            ]
+          }
+        } ]
+      }
+    },
+    "InstanceProfile": {
+      "Type": "AWS::IAM::InstanceProfile",
+      "Properties": {
+        "Path": "/",
+        "Roles": [ {"Ref": "ServerRole"} ]
+      }
+    },
+    "AutoscalingGroup": {
+      "Type": "AWS::AutoScaling::AutoScalingGroup",
+      "Properties": {
+        "AvailabilityZones": { "Fn::GetAZs": "" },
+        "LaunchConfigurationName": { "Ref": "LaunchConfig" },
+        "MinSize": {"Ref": "MinInstances"},
+        "MaxSize": {"Ref": "MaxInstances"},
+        "HealthCheckType": "ELB",
+        "HealthCheckGracePeriod": 400,
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "packer-chroot-builder",
+            "PropagateAtLaunch": "true"
+          }
+        ]
+      }
+    },
+    "LaunchConfig": {
+      "Type": "AWS::AutoScaling::LaunchConfiguration",
+      "Properties": {
+        "ImageId": {"Ref": "AmiId"},
+        "KeyName": { "Ref": "KeyName" },
+        "SecurityGroups": [
+          {"Ref": "InstanceSecurityGroup"}
+        ],
+        "InstanceType": {"Ref": "InstanceType"},
+        "IamInstanceProfile": {"Ref": "InstanceProfile"},
+        "UserData": {
+          "Fn::Base64": {
+            "Fn::Join": ["\n", [
+              "apt-get install -y git unzip",
+              "cd /root",
+              "git clone https://github.com/guardian/machine-images.git",
+              "cd machine-images",
+              "./setup.sh"
+            ]
+          ]
+          }
+        }
+      }
+    },
+    "InstanceSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "VpcId": { "Ref": "VpcId" },
+        "GroupDescription": "Open up SSH access from the office",
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "22",
+            "ToPort": "22",
+            "CidrIp": "77.91.248.0/21"
+          }
+        ]
+      }
+    }
+  }
+}
