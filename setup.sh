@@ -2,6 +2,9 @@
 # Install packer locally
 set -e
 
+# Install apt caching proxy
+apt-get install -y apt-cacher-ng
+
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 PACKER_DIR="${SCRIPTPATH}/packer_bin"
 

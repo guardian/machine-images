@@ -11,10 +11,6 @@
       "Type": "String",
       "Default": "ami-bf72c4cc"
     },
-    "VpcId": {
-      "Description": "ID of the VPC onto which to launch the build host",
-      "Type": "AWS::EC2::VPC::Id"
-    },
     "InstanceType": {
       "Description": "EC2 instance type",
       "Type": "String",
@@ -115,7 +111,6 @@
     "InstanceSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "VpcId": { "Ref": "VpcId" },
         "GroupDescription": "Open up SSH access from the office",
         "SecurityGroupIngress": [
           {
