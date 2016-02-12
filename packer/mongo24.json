@@ -69,6 +69,14 @@
 
   "provisioners" : [
     {
+      "type": "shell",
+      "inline": [
+        "echo '#!/bin/sh' > /usr/sbin/policy-rc.d",
+        "echo 'exit 101' >> /usr/sbin/policy-rc.d",
+        "chmod a+x /usr/sbin/policy-rc.d"
+      ]
+    },
+    {
       "type": "file",
       "source": "resources/features",
       "destination": "/tmp"
@@ -99,6 +107,12 @@
         "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo-opsmanager/server-install.sh"
       ],
       "only": ["mongo-opsmanager-server"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "rm -f /usr/sbin/policy-rc.d"
+      ]
     }
   ]
 }
