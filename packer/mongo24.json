@@ -12,11 +12,6 @@
       "name": "mongo24",
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "norelatime"],
-      "chroot_mounts": [
-        ["bind", "/lib/modules", "/lib/modules"],
-        ["proc", "proc", "/proc"],
-        ["bind", "/dev", "/dev"]
-      ],
       "access_key": "{{user `aws_access_key`}}",
       "secret_key": "{{user `aws_secret_key`}}",
       "region": "eu-west-1",
@@ -37,11 +32,6 @@
       "name": "mongo-opsmanager",
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "norelatime"],
-      "chroot_mounts": [
-        ["bind", "/lib/modules", "/lib/modules"],
-        ["proc", "proc", "/proc"],
-        ["bind", "/dev", "/dev"]
-      ],
       "region": "eu-west-1",
       "access_key": "{{user `aws_access_key`}}",
       "secret_key": "{{user `aws_secret_key`}}",
@@ -62,11 +52,6 @@
       "name": "mongo-opsmanager-server",
       "type": "amazon-chroot",
       "mount_options": ["noatime", "nodiratime", "norelatime"],
-      "chroot_mounts": [
-        ["bind", "/lib/modules", "/lib/modules"],
-        ["proc", "proc", "/proc"],
-        ["bind", "/dev", "/dev"]
-      ],
       "region": "eu-west-1",
       "access_key": "{{user `aws_access_key`}}",
       "secret_key": "{{user `aws_secret_key`}}",
