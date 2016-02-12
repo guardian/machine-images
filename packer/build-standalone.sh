@@ -1,5 +1,7 @@
 #!/bin/bash
 
+echo "Starting at $(date)"
+
 SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 PACKER_HOME="${SCRIPTPATH}/../packer_bin"
 
@@ -12,3 +14,5 @@ ${PACKER_HOME}/packer build $FLAGS \
   -var "aws_access_key=${AWS_ACCESS_KEY_ID}" \
   -var "aws_access_key=${AWS_SECRET_ACCESS_KEY}" \
   ${packer_file}
+
+echo "Stopping at $(date)"
