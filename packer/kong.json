@@ -5,7 +5,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_vivid_source_ami": "ami-4aa8ea3d",
+    "euw1_vivid_source_ami": "ami-c93583ba",
     "instance_profile": "packer-machine-images"
   },
   "builders": [

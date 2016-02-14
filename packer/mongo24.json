@@ -5,7 +5,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-9d2f0fea",
+    "euw1_source_ami": "ami-71cd7d02",
     "instance_profile": "PackerUser-PackerInstanceProfile-O1WXS2KZ0LV1"
   },
   "builders": [
