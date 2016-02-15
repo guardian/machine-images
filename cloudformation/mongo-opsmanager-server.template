@@ -399,27 +399,33 @@
           {
             "IpProtocol": "tcp",
             "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": "10.248.202.0/23"
           },{
             "IpProtocol": "tcp",
             "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": "10.248.204.0/23"
           },{
             "IpProtocol": "tcp",
             "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": "10.248.206.0/23"
           },
           {
             "IpProtocol": "tcp",
             "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": "10.248.53.0/26"
           },{
             "IpProtocol": "tcp",
             "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": "10.248.53.64/26"
           },{
             "IpProtocol": "tcp",
             "FromPort": "443",
+            "ToPort": "443",
             "CidrIp": "10.248.53.128/26"
           }
         ],
