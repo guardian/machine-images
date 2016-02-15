@@ -398,19 +398,29 @@
         "SecurityGroupIngress": [
           {
             "IpProtocol": "tcp",
-            "FromPort": "8081",
-            "ToPort": "8081",
+            "FromPort": "443",
             "CidrIp": "10.248.202.0/23"
           },{
             "IpProtocol": "tcp",
-            "FromPort": "8081",
-            "ToPort": "8081",
+            "FromPort": "443",
             "CidrIp": "10.248.204.0/23"
           },{
             "IpProtocol": "tcp",
-            "FromPort": "8081",
-            "ToPort": "8081",
+            "FromPort": "443",
             "CidrIp": "10.248.206.0/23"
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "CidrIp": "10.248.53.0/26"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "CidrIp": "10.248.53.64/26"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "CidrIp": "10.248.53.128/26"
           }
         ],
         "SecurityGroupEgress": [
@@ -430,9 +440,10 @@
         "CrossZone": true,
         "Listeners": [
           {
-            "Protocol": "HTTP",
-            "LoadBalancerPort": "8081",
-            "InstancePort": "8081"
+            "Protocol": "HTTPS",
+            "LoadBalancerPort": "443",
+            "InstancePort": "8081",
+            "SSLCertificateId": { "Ref": "SSLCertificateArn" }
           }
         ],
         "HealthCheck": {
