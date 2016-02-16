@@ -427,7 +427,23 @@
             "FromPort": "443",
             "ToPort": "443",
             "CidrIp": "10.248.53.128/26"
-          }
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "10.248.153.0/26"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "10.248.153.64/26"
+          },{
+            "IpProtocol": "tcp",
+            "FromPort": "443",
+            "ToPort": "443",
+            "CidrIp": "10.248.153.128/26"
+          },
         ],
         "SecurityGroupEgress": [
           {
