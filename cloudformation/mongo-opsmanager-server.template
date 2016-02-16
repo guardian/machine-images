@@ -308,7 +308,7 @@
           },
           {
             "IpProtocol": "tcp",
-            "FromPort": "8080",
+            "FromPort": "8081",
             "ToPort": "8081",
             "SourceSecurityGroupId": { "Ref": "BackupLoadBalancerSecurityGroup" }
           }
@@ -443,12 +443,12 @@
             "FromPort": "443",
             "ToPort": "443",
             "CidrIp": "10.248.153.128/26"
-          },
+          }
         ],
         "SecurityGroupEgress": [
           {
             "IpProtocol": "tcp",
-            "FromPort": "8080",
+            "FromPort": "8081",
             "ToPort": "8081",
             "CidrIp": "0.0.0.0/0"
           }
