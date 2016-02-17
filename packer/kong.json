@@ -5,15 +5,15 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_vivid_source_ami": "ami-4aa8ea3d",
-    "instance_profile": "packer-machine-images"
+    "euw1_wily_source_ami": "ami-36a71645",
+    "instance_profile": "PackerUser-PackerInstanceProfile-O1WXS2KZ0LV1"
   },
   "builders": [
     {
       "name": "kong",
       "type": "amazon-ebs",
       "region": "eu-west-1",
-      "source_ami": "{{user `euw1_vivid_source_ami`}}",
+      "source_ami": "{{user `euw1_wily_source_ami`}}",
       "instance_type": "t2.micro",
       "ssh_username": "ubuntu",
       "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
@@ -28,7 +28,7 @@
         "Build":"{{user `build_number`}}",
         "Branch":"{{user `build_branch`}}",
         "VCSRef":"{{user `build_vcs_ref`}}",
-        "SourceAMI":"{{user `euw1_vivid_source_ami`}}"
+        "SourceAMI":"{{user `euw1_wily_source_ami`}}"
       }
     }
   ],
@@ -41,7 +41,7 @@
     },
     {
       "type": "shell",
-      "script": "resources/ubuntu-vivid.sh",
+      "script": "resources/ubuntu-wily.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
     },
     {

@@ -1,4 +1,4 @@
-Enhanced networking for Ubuntu Vivid
+Enhanced networking for Ubuntu Wily
 ====================================
 
 *NOTE: This feature is always installed whilst building the base Ubuntu AMIs.*
