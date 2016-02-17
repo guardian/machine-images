@@ -13,9 +13,9 @@ cp -R /tmp/features /opt/
 
 ## Update index and install packages
 new_section "Configuring extra repositories"
-add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ vivid universe multiverse"
-add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ vivid main restricted"
-add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ vivid-updates universe multiverse"
+add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ wily universe multiverse"
+add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ wily main restricted"
+add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ wily-updates universe multiverse"
 # sometimes apt-get update doesn't see the changes here, try sleeping for a moment
 sleep 1
 

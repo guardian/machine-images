@@ -5,7 +5,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-c93583ba",
+    "euw1_source_ami": "ami-36a71645",
     "instance_profile": "packer-machine-images"
   },
   "builders": [
@@ -41,7 +41,7 @@
     },
     {
       "type": "shell",
-      "script": "resources/ubuntu-vivid.sh",
+      "script": "resources/ubuntu-wily.sh",
       "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
     },
     {
