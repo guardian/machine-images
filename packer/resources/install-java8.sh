@@ -10,7 +10,7 @@ function new_section {
 set -e
 ## Update index and install packages
 new_section "Configuring extra repositories"
-add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ wily universe"
+add-apt-repository "deb http://eu-west-1.ec2.archive.ubuntu.com/ubuntu/ vivid universe"
 # sometimes apt-get update doesn't see the changes here, try sleeping for a moment
 sleep 1
 
