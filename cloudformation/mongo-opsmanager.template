@@ -6,10 +6,9 @@
       "Description": "The EC2 Key Pair to allow SSH access to the instance",
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
-    "SshKeyFileS3Url": {
-      "Description": "S3 URL for a list of public SSH keys to use for the default ubuntu user",
-      "Type": "String",
-      "Default": ""
+    "GitHubTeamName": {
+      "Description": "Name of GitHub team to install SSH keys for",
+      "Type": "String"
     },
     "SSHAccessCIDR": {
       "Description": "IP address range allowed to SSH to the MongoDB instances",
@@ -92,11 +91,6 @@
     "TemporaryAccessCIDR": {
       "Description": "A CIDR block that can access the mongo instances (prior to adding the security group to the API / Backup). This should be removed after transition.",
       "Type": "String"
-    }
-  },
-  "Conditions" : {
-    "DoNotRetrieveSshKeysFromS3" : {
-      "Fn::Equals" : [ {"Ref" : "SshKeyFileS3Url"}, "" ]
     }
   },
   "Resources": {
@@ -362,6 +356,27 @@
         ]
       }
     },
+    "GetTeamKeysPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GetTeamKeysPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject"],
+              "Resource": ["arn:aws:s3:::github-team-keys/*"]
+            },
+            {
+              "Effect":"Allow",
+              "Action": ["s3:ListBucket"],
+              "Resource":"arn:aws:s3:::github-team-keys"
+            }
+          ]
+        },
+        "Roles": [{"Ref": "ServerRole"}]
+      }
+    },
     "SSHSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -520,12 +535,7 @@
               [
                 "#!/bin/bash -ev",
 
-                { "Fn::If" : [
-                    "DoNotRetrieveSshKeysFromS3",
-                    "# Not retrieving SSH keys from S3",
-                    { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
-                  ]
-                },
+                { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -t ", { "Ref": "GitHubTeamName" }, " -b github-team-keys || true" ]] },
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", {"Ref":"DatabaseVolumeSize"}, " -d f -m /var/lib/mongodb -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
 
                 "/opt/features/mongo-opsmanager/agent-configure.sh"
