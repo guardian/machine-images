@@ -80,6 +80,10 @@
       "Description": "Bucket to store team public keys in (used to encrypt backup)",
       "Type": "String",
       "Default": "flex-mongo-snapshots-backup-public-keys"
+    },
+    "MongoAccessSecurityGroup": {
+      "Description": "The security group from the Mongo CF stack which will allow access to the mongo instances",
+      "Type": "AWS::EC2::SecurityGroup::Id"
     }
   },
   "Conditions" : {
@@ -457,6 +461,9 @@
         "SecurityGroups": [
           {
             "Ref": "SSHSecurityGroup"
+          },
+          {
+            "Ref": "MongoAccessSecurityGroup"
           }
         ],
         "InstanceType": {"Ref": "InstanceType"},

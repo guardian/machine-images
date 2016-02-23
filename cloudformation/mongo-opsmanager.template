@@ -16,14 +16,6 @@
       "Type": "String",
       "Default": "10.249.0.0/16"
     },
-    "ReplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::Id",
-      "Description": "Security group allowed to access port 27017 for replication"
-    },
-    "ClientSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::Id",
-      "Description": "Security group allowed to access port 27017 as clients"
-    },
     "DatabaseVolumeSize": {
       "Description": "Size of EBS volume for MongoDB data files (GB)",
       "Type": "Number",
@@ -96,6 +88,10 @@
         "m4.xlarge",
         "r3.xlarge"
       ]
+    },
+    "TemporaryAccessCIDR": {
+      "Description": "A CIDR block that can access the mongo instances (prior to adding the security group to the API / Backup). This should be removed after transition.",
+      "Type": "String"
     }
   },
   "Conditions" : {
@@ -383,6 +379,57 @@
         ]
       }
     },
+    "ReplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow replication connections from other nodes in the replica set",
+        "VpcId": {
+          "Ref": "VpcId"
+        }
+      }
+    },
+    "ReplicationSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Fn::GetAtt": [ "ReplicationSecurityGroup", "GroupId" ] },
+        "IpProtocol": "tcp",
+        "FromPort": "27017",
+        "ToPort": "27017",
+        "SourceSecurityGroupId": { "Fn::GetAtt": [ "ReplicationSecurityGroup", "GroupId" ] }
+      }
+    },
+    "MongoAccessSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allows connections to the mongo replica set",
+        "VpcId": {
+          "Ref": "VpcId"
+        }
+      }
+    },
+    "AccessSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow connections to the replica set",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "CidrIp": {"Ref": "TemporaryAccessCIDR"}
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "SourceSecurityGroupId": { "Ref": "MongoAccessSecurityGroup"}
+          }
+        ]
+      }
+    },
     "AutoscalingGroup": {
       "Type": "AWS::AutoScaling::AutoScalingGroup",
       "Properties": {
@@ -459,7 +506,7 @@
             "Ref": "ReplicationSecurityGroup"
           },
           {
-            "Ref": "ClientSecurityGroup"
+            "Ref": "AccessSecurityGroup"
           }
         ],
         "InstanceType": { "Ref": "InstanceType" },
@@ -487,6 +534,12 @@
           }
         }
       }
+    }
+  },
+  "Outputs": {
+    "AccessSecurityGroup": {
+      "Description" : "The security group that instances should to access the mongo instances",
+      "Value" : {"Ref": "MongoAccessSecurityGroup"}
     }
   }
 }
