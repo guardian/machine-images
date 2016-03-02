@@ -17,8 +17,7 @@
     },
     "DatabaseVolumeSize": {
       "Description": "Size of EBS volume for MongoDB data files (GB)",
-      "Type": "Number",
-      "Default": "100"
+      "Type": "Number"
     },
     "DiskSpaceUtilisationAlertThreshold": {
       "Description": "Percentage of disk utilisation to trigger an alert for. E.g. 50 for alerting when any disk is at >= 50% capacity.",
@@ -77,7 +76,7 @@
     "EBSOptions": {
       "Description": "Extra parameters to add-encrypted script",
       "Type": "String",
-      "Default": "-t io1 -i 1000"
+      "Default": "-t gp2"
     },
     "InstanceType": {
       "Description": "The instance type for the database nodes (typically smaller for prePROD)",
@@ -236,7 +235,7 @@
               ],
               "Effect": "Allow",
               "Resource": { "Ref": "CustomerMasterKey"}
-            }
+              }
           ]
         },
         "Roles": [{"Ref": "ServerRole"}]
@@ -368,9 +367,9 @@
               "Resource": ["arn:aws:s3:::github-team-keys/*"]
             },
             {
-              "Effect":"Allow",
+              "Effect": "Allow",
               "Action": ["s3:ListBucket"],
-              "Resource":"arn:aws:s3:::github-team-keys"
+              "Resource": "arn:aws:s3:::github-team-keys"
             }
           ]
         },
@@ -397,10 +396,18 @@
     "ReplicationSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
-        "GroupDescription": "Allow replication connections from other nodes in the replica set",
+        "GroupDescription": "Allow connections to mongo DB",
         "VpcId": {
           "Ref": "VpcId"
-        }
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "CidrIp": "10.0.0.0/8"
+          }
+        ]
       }
     },
     "ReplicationSecurityGroupIngress": {
@@ -548,7 +555,7 @@
   },
   "Outputs": {
     "AccessSecurityGroup": {
-      "Description" : "The security group that instances should to access the mongo instances",
+      "Description": "The security group that instances should to access the mongo instances",
       "Value" : {"Ref": "MongoAccessSecurityGroup"}
     }
   }
