@@ -100,10 +100,9 @@ chown ${USER} ${HOME_DIR}/logs
 # Install an application that was packaged by the sbt-native-packager
 # download
 PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" /tmp/native-package.XXXXXX)
-if [ -n "${BUCKET}" ]; then
-  aws s3 cp "s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP}.${TYPE}" \
-            "${PACKAGE_FILE}" --region ${REGION}
-fi
+BUCKET_PREFIX="s3://${BUCKET}/${STACK}/${STAGE}/${APP}"
+aws s3 cp "${BUCKET_PREFIX}/${APP}.${TYPE}" \
+          "${PACKAGE_FILE}" --region ${REGION}
 
 # unpack
 case "${TYPE}" in
@@ -125,18 +124,23 @@ INIT=$(cat /proc/1/comm)
 
 case "${INIT}" in
   init)
-    # install upstart/systemd file
-    /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
+    # install upstart file
+    aws s3 cp "${BUCKET_PREFIX}/${APP}.conf" "/etc/init/${APP}.conf" --region ${REGION} || {
+      /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
                     ${SCRIPTPATH}/upstart.conf.template > /etc/init/${APP}.conf
+    }
+
     # optionally start
     if [ "${START}" == "true" ]; then
       start ${APP}
     fi
     ;;
   systemd)
-    # install upstart/systemd file
-    /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
+    # install systemd file
+    aws s3 cp "${BUCKET_PREFIX}/${APP}.service" "/etc/systemd/system/${APP}.service" --region ${REGION} || {
+      /opt/features/templating/subst.sh USER=${USER} APP=${TARBALL_APP} \
                     ${SCRIPTPATH}/systemd.service.template > /etc/systemd/system/${APP}.service
+    }
     # optionally start
     if [ "${START}" == "true" ]; then
       systemctl start ${APP}
