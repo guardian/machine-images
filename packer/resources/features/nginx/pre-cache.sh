@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# Downloads Node.JS
+# Downloads Nginx
 #
 # This script must be run as root
 set -e
