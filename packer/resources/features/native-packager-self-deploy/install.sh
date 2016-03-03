@@ -90,7 +90,7 @@ fi
 
 # Make user
 if ! getent passwd ${USER} >/dev/null; then
-  /usr/sbin/useradd -M -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
+  /usr/sbin/useradd -m -r --shell /sbin/nologin -d ${HOME_DIR} ${USER}
 fi
 
 # create the logs dir used in the upstart script
