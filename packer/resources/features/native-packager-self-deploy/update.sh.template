@@ -22,6 +22,13 @@ SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
 source ${SCRIPTPATH}/../templating/metadata.sh
 REGION=$(get_region)
 
+# Install a new copy of the properties file
+ORIGIN=@ORIGIN@
+DESTINATION=@DESTINATION@
+if [ -n "${ORIGIN}" -a -n "${DESTINATION}" ]; then
+    aws s3 cp ${ORIGIN} ${DESTINATION} --region ${REGION}
+fi
+
 # Install an application that was packaged by the sbt-native-packager
 # download
 PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" /tmp/native-package.XXXXXX)
