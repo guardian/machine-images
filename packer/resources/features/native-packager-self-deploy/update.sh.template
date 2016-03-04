@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+set -e
+
+function HELP {
+>&2 cat << EOF
+
+  Usage: ${0}
+
+  This script downloads and expands a sbt-native-packager file.
+
+    -h            Displays this help message. No further functions are
+                  performed.
+
+EOF
+exit 1
+}
+
+TYPE=@TYPE@
+HOME_DIR=@HOME_DIR@
+
+SCRIPTPATH=$( cd $(dirname $0) ; pwd -P )
+source ${SCRIPTPATH}/../templating/metadata.sh
+REGION=$(get_region)
+
+# Install an application that was packaged by the sbt-native-packager
+# download
+PACKAGE_FILE=$(mktemp --suffix=".${TYPE}" /tmp/native-package.XXXXXX)
+aws s3 cp @S3LOCATION@ ${PACKAGE_FILE} --region ${REGION}
+
+# unpack
+case "${TYPE}" in
+    'tar.gz'|'tgz')
+      tar -C ${HOME_DIR} -xzf ${PACKAGE_FILE}
+      ;;
+    'zip')
+      unzip ${PACKAGE_FILE} -d ${HOME_DIR}
+      ;;
+    *)
+      echo "Unknown type: '${TYPE}'"
+      exit 1
+      ;;
+esac
+
+# try to clean up
+rm ${PACKAGE_FILE} || true

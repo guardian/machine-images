@@ -1,0 +1,13 @@
+[Unit]
+Description=@APP@ application
+
+[Service]
+User=@USER@
+Restart=on-failure
+WorkingDirectory=/home/@USER@
+ExecStartPre=@UPDATE_SCRIPT@
+ExecStart=/home/@USER@/@APP@/bin/@APP@
+RestartForceExitStatus=217
+
+[Install]
+WantedBy=multi-user.target
