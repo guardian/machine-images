@@ -16,6 +16,10 @@ function HELP {
                   (default=tar.gz). Currently knows how to deploy gzipped tar
                   files.
 
+    -o s3-loc     The origin location of a properties file in S3
+
+    -d file       The destination location of the properties file on local disk
+
     -u user       The user to create and deploy as, defaults to the 'Stack' tag.
 
     -a app        The name of the native-package app. This defaults to the
@@ -37,7 +41,7 @@ TYPE=${DEFAULT_TYPE}
 unset USER
 
 # Process options
-while getopts b:t:u:a:sh FLAG; do
+while getopts b:t:u:a:o:d:sh FLAG; do
   case $FLAG in
     b)
       BUCKET=$OPTARG
@@ -50,6 +54,12 @@ while getopts b:t:u:a:sh FLAG; do
       ;;
     a)
       TARBALL_APP=$OPTARG
+      ;;
+    o)
+      ORIGIN=$OPTARG
+      ;;
+    d)
+      DESTINATION=$OPTARG
       ;;
     s)
       START="true"
@@ -102,6 +112,7 @@ S3LOCATION="s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP}.${TYPE}"
 # install the update script
 UPDATE_SCRIPT="${SCRIPTPATH}/update.sh"
 /opt/features/templating/subst.sh S3LOCATION=${S3LOCATION} HOME_DIR=${HOME_DIR} TYPE=${TYPE} \
+                ORIGIN=${ORIGIN} DESTINATION=${DESTINATION} \
                 ${SCRIPTPATH}/update.sh.template > ${UPDATE_SCRIPT}
 chmod a+x ${UPDATE_SCRIPT}
 
