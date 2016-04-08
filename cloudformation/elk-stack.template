@@ -263,6 +263,11 @@
                         "Protocol": "TCP",
                         "LoadBalancerPort": "6379",
                         "InstancePort": "6379"
+                    },
+                    {
+                        "Protocol": "TCP",
+                        "LoadBalancerPort": "80",
+                        "InstancePort": "80"
                     }
                 ],
                 "HealthCheck": {
@@ -439,6 +444,12 @@
                         "FromPort": "6379",
                         "ToPort": "6379",
                         "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": "10.249.0.0/16"
                     }
                 ],
                 "SecurityGroupEgress": [
@@ -447,6 +458,12 @@
                         "FromPort": "6379",
                         "ToPort": "6379",
                         "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "0",
+                        "ToPort": "65535",
+                        "CidrIp": "10.249.0.0/16"
                     }
                 ]
             }
@@ -462,6 +479,12 @@
                         "IpProtocol": "tcp",
                         "FromPort": "6379",
                         "ToPort": "6379",
+                        "SourceSecurityGroupId": { "Ref": "IntLBSG" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
                         "SourceSecurityGroupId": { "Ref": "IntLBSG" }
                     },
                     {
