@@ -97,6 +97,11 @@
         "MediaServiceAccountId": {
             "Description": "The AWS account ID for the Media Service",
             "Type": "String"
+        },
+        "InternalCidrIp": {
+            "Description": "What constitutes an 'internal' IP address (CIDR IP notation) and should therefore be allowed to access ElasticSearch directly",
+            "Type": "String",
+            "Default": "10.249.0.0/16"
         }
     },
 
@@ -437,7 +442,7 @@
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
                 "VpcId": { "Ref": "VpcId" },
-                "GroupDescription": "Allow logstash messages to internal ELB",
+                "GroupDescription": "Allow logstash messages and http access to internal ELB",
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
@@ -449,7 +454,7 @@
                         "IpProtocol": "tcp",
                         "FromPort": "80",
                         "ToPort": "80",
-                        "CidrIp": "10.249.0.0/16"
+                        "CidrIp": { "Ref": "InternalCidrIp" }
                     }
                 ],
                 "SecurityGroupEgress": [
@@ -463,7 +468,7 @@
                         "IpProtocol": "tcp",
                         "FromPort": "0",
                         "ToPort": "65535",
-                        "CidrIp": "10.249.0.0/16"
+                        "CidrIp": { "Ref": "InternalCidrIp" }
                     }
                 ]
             }
