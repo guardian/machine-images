@@ -36,6 +36,9 @@ def setup_mongod(options, name, port)
 
   mongo_config_template = ERB.new(File.read("#{options.template_dir}/mongod.conf.erb"))
   File.write("#{options.ch_root}/etc/mongod-#{@name}.conf", mongo_config_template.result)
+
+  mongo_logrotate_template = ERB.new(File.read("#{options.template_dir}/mongod.logrotate.erb"))
+  File.write("#{options.ch_root}/etc/logrotate.d/mongod-#{@name}", mongo_logrotate_template.result)
 end
 
 def setup_mms(options, data)
