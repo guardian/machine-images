@@ -28,15 +28,15 @@
       "Description": "AMI id from the machine-images repo",
       "Type": "String"
     },
-    "IOPS": {
-      "Description": "IOPS to provision",
+    "EBSAdminVolumeSize": {
+      "Description": "Size of application EBS volume",
+      "Type": "Number",
+      "Default": "350"
+    },
+    "EBSDataVolumeSize": {
+      "Description": "Size of blockstore and backup EBS volumes",
       "Type": "Number",
       "Default": "500"
-    },
-    "EBSVolumeSize": {
-      "Description": "Size of EBS volume",
-      "Type": "Number",
-      "Default": "200"
     },
     "Size": {
       "Description": "Size of ASG",
@@ -539,9 +539,9 @@
               [
                 "#!/bin/bash -ev",
                 { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -b github-team-keys -t ", {"Ref":"GithubTeamName"}, " || true\n"] ] },
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSVolumeSize" }, " -d f -m /var/lib/mongodb/application -o 'defaults,noatime' -x -u mongodb -i ", { "Ref": "IOPS" }, " -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSVolumeSize" }, " -d g -m /var/lib/mongodb/blockstore -o 'defaults,noatime' -x -u mongodb -i ", { "Ref": "IOPS" }, " -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
-                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSVolumeSize" }, " -d h -m /var/lib/mongodb/backup -o 'defaults,noatime' -x -u mongodb-mms -i ", { "Ref": "IOPS" }, " -t io1 -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSAdminVolumeSize" }, " -d f -m /var/lib/mongodb/application -o 'defaults,noatime' -x -u mongodb -t gp2 -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSDataVolumeSize" }, " -d g -m /var/lib/mongodb/blockstore -o 'defaults,noatime' -x -u mongodb -t gp2 -k ", { "Ref": "CustomerMasterKey" }] ] },
+                { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref": "EBSDataVolumeSize" }, " -d h -m /var/lib/mongodb/backup -o 'defaults,noatime' -x -u mongodb-mms -t gp2 -k ", { "Ref": "CustomerMasterKey" }] ] },
                 "/opt/features/mongo-opsmanager/server-configure.sh"
 
               ]
