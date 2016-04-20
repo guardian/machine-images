@@ -5,7 +5,7 @@
     "build_vcs_ref": "",
     "account_numbers": "",
     "build_branch": "DEV",
-    "euw1_source_ami": "ami-36a71645",
+    "euw1_source_ami": "ami-ea4fcf99",
     "instance_profile": "PackerUser-PackerInstanceProfile-O1WXS2KZ0LV1",
     "vpc_id": "",
     "subnet_id": ""
