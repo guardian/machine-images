@@ -31,3 +31,6 @@ if ! getent passwd mongo-backup >/dev/null; then
 fi
 
 chown mongo-backup /backup
+
+# install memory/swap/disk usage monitoring agent
+${SCRIPTPATH}/../cloudwatch-monitoring/install.sh -d/,/backup

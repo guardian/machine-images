@@ -29,5 +29,8 @@ chown mongodb:mongodb /var/log/mongodb
 # chown the data mount
 chown mongodb /var/lib/mongodb
 
+# install memory/swap/disk usage monitoring agent
+${SCRIPTPATH}/../cloudwatch-monitoring/install.sh -d/,/var/lib/mongodb
+
 # Run the replica set initialisation script
 ${SCRIPTPATH}/scripts/opsmanager_add_self_to_replset.rb
