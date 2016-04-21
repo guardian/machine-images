@@ -141,6 +141,15 @@ end
 ## main
 exit if __FILE__ != $0
 
+# take out a lock so we don't run more than once
+program = File.expand_path($PROGRAM_NAME)
+program_file = File.open(program)
+status = program_file.flock(File::LOCK_EX | File::LOCK_NB)
+if status != 0
+  logger.warn "#{$PROGRAM_NAME} already running"
+  exit 0
+end
+
 # use instance profile (when on instance)
 Aws.config[:credentials] = Aws::InstanceProfileCredentials.new
 Aws.config[:region] = AwsHelper::Metadata::region
