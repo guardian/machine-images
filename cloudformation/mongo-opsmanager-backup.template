@@ -485,8 +485,7 @@
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", {"Ref":"BackupVolumeSize"}, " -d f -m /backup -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
 
                 "/opt/features/mongo-opsmanager/backup-agent-configure.sh",
-                { "Fn::Join": [ "", ["echo '/opt/features/alarming-crontab/install.sh -u ubuntu -d 'Snapshot backup cron task' -c '*/30 * * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "'' > /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"] ] },
-                "crontab -u mongo-backup /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"
+                { "Fn::Join": [ "", ["/opt/features/alarming-crontab/install.sh -u ubuntu -d 'Snapshot backup cron task' -c '*/30 * * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "'"] ] }
               ]
             ]
           }
