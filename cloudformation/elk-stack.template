@@ -98,6 +98,10 @@
             "Description": "The AWS account ID for the Media Service",
             "Type": "String"
         },
+        "GithubTeamName": {
+            "Description": "Github team name, used for giving ssh access to members of the team. (optional)",
+            "Type": "String"
+        },
         "InternalCidrIp": {
             "Description": "What constitutes an 'internal' IP address (CIDR IP notation) and should therefore be allowed to access ElasticSearch directly",
             "Type": "String",
@@ -107,7 +111,8 @@
 
     "Conditions": {
         "HostnameSpecified": {"Fn::Not": [{"Fn::Equals": [{"Ref": "Hostname"}, ""]}]},
-        "SnapshotBucketSpecified": {"Fn::Not": [{"Fn::Equals": [{"Ref": "SnapshotBucket"}, ""]}]}
+        "SnapshotBucketSpecified": {"Fn::Not": [{"Fn::Equals": [{"Ref": "SnapshotBucket"}, ""]}]},
+        "GithubTeamSpecified": {"Fn::Not": [{"Fn::Equals": [{"Ref": "GithubTeamName"}, ""]}]}
     },
 
     "Mappings" : {
@@ -189,6 +194,28 @@
                 "Roles": [ {
                     "Ref": "MediaServiceKinesisSenderRole"
                 } ]
+            }
+        },
+
+        "GetTeamKeysPolicy": {
+            "Type": "AWS::IAM::Policy",
+            "Properties": {
+                "PolicyName": "GetTeamKeysPolicy",
+                "PolicyDocument": {
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Action": ["s3:GetObject"],
+                            "Resource": ["arn:aws:s3:::github-team-keys/*"]
+                        },
+                        {
+                            "Effect":"Allow",
+                            "Action": ["s3:ListBucket"],
+                            "Resource":"arn:aws:s3:::github-team-keys"
+                        }
+                    ]
+                },
+                "Roles": [{"Ref": "Role"}]
             }
         },
 
@@ -339,6 +366,10 @@
                     "Fn::Base64": {
                         "Fn::Join": [ "\n", [
                             "#!/bin/bash -ev",
+                            {"Fn::If": ["GithubTeamSpecified",
+                                { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -b github-team-keys -t ", {"Ref":"GithubTeamName"}, " -l || true"] ] },
+                                ""
+                            ]},
                             { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s 100 -d f -m /data -x -k ", { "Ref": "CustomerMasterKey" }] ] },
                             "[ -d /data ] || mkdir /data",
                             "echo '/dev/xvdf    /data    ext4    defaults,nofail    0 2' >> /etc/fstab",
