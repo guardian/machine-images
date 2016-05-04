@@ -29,7 +29,7 @@ update-rc.d set-readahead defaults
 echo "net.ipv4.tcp_keepalive_time = 300" > /etc/sysctl.d/71-tcp-keepalive.conf
 
 # install OpsManager MMS and backup daemon
-curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms_1.8.1.290-1_x86_64.deb -o /tmp/mongo-mms.deb
+curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms_1.8.3.329-1_x86_64.deb -o /tmp/mongo-mms.deb
 dpkg --install /tmp/mongo-mms.deb
-curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms-backup-daemon_1.8.1.290-1_x86_64.deb -o /tmp/mongo-mms-backup-daemon.deb
+curl -L https://downloads.mongodb.com/on-prem-mms/deb/mongodb-mms-backup-daemon_1.8.3.329-1_x86_64.deb -o /tmp/mongo-mms-backup-daemon.deb
 dpkg --install /tmp/mongo-mms-backup-daemon.deb

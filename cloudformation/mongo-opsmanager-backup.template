@@ -43,12 +43,12 @@
     "EBSOptions": {
       "Description": "Extra parameters to add-encrypted script",
       "Type": "String",
-      "Default": "-t io1 -i 1000"
+      "Default": "-t gp2"
     },
     "BackupVolumeSize": {
       "Description": "Size of EBS volume for backup files (GB)",
       "Type": "Number",
-      "Default": "100"
+      "Default": "300"
     },
     "VpcId": {
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",

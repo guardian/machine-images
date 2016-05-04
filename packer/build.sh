@@ -25,7 +25,6 @@ FLAGS='-color=false'
 [ -z "${BUILD_BRANCH}" ] && BUILD_BRANCH="DEV"
 [ -z "${BUILD_VCS_REF}" ] && BUILD_VCS_REF="DEV"
 
-
 # set BUILD_NUMBER to DEV if not in TeamCity
 BUILD_NAME=${TEAMCITY_PROJECT_NAME}-${TEAMCITY_BUILDCONF_NAME}
 [ -z "${TEAMCITY_BUILDCONF_NAME}" -o -z "${TEAMCITY_PROJECT_NAME}" ] && BUILD_NAME="unknown"
@@ -52,5 +51,6 @@ echo "Running packer with ${packer_file}" 1>&2
 ${PACKER_HOME}/packer build $FLAGS \
   -var "build_number=${BUILD_NUMBER}" -var "build_name=${BUILD_NAME}" \
   -var "build_branch=${BUILD_BRANCH}" -var "account_numbers=${ACCOUNT_NUMBERS}" \
-  -var "build_vcs_ref=${BUILD_VCS_REF}" \
+  -var "build_vcs_ref=${BUILD_VCS_REF}" -var "vpc_id=${VPC_ID}" \
+  -var "subnet_id=${SUBNET_ID}" \
   ${packer_file}

@@ -100,8 +100,12 @@
         },
         "GithubTeamName": {
             "Description": "Github team name, used for giving ssh access to members of the team. (optional)",
+            "Type": "String"
+        },
+        "InternalCidrIp": {
+            "Description": "What constitutes an 'internal' IP address (CIDR IP notation) and should therefore be allowed to access ElasticSearch directly",
             "Type": "String",
-            "Default": ""
+            "Default": "10.249.0.0/16"
         }
     },
 
@@ -291,6 +295,11 @@
                         "Protocol": "TCP",
                         "LoadBalancerPort": "6379",
                         "InstancePort": "6379"
+                    },
+                    {
+                        "Protocol": "TCP",
+                        "LoadBalancerPort": "80",
+                        "InstancePort": "80"
                     }
                 ],
                 "HealthCheck": {
@@ -464,13 +473,19 @@
             "Type": "AWS::EC2::SecurityGroup",
             "Properties": {
                 "VpcId": { "Ref": "VpcId" },
-                "GroupDescription": "Allow logstash messages to internal ELB",
+                "GroupDescription": "Allow logstash messages and http access to internal ELB",
                 "SecurityGroupIngress": [
                     {
                         "IpProtocol": "tcp",
                         "FromPort": "6379",
                         "ToPort": "6379",
                         "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
+                        "CidrIp": { "Ref": "InternalCidrIp" }
                     }
                 ],
                 "SecurityGroupEgress": [
@@ -479,6 +494,12 @@
                         "FromPort": "6379",
                         "ToPort": "6379",
                         "CidrIp": "0.0.0.0/0"
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "0",
+                        "ToPort": "65535",
+                        "CidrIp": { "Ref": "InternalCidrIp" }
                     }
                 ]
             }
@@ -494,6 +515,12 @@
                         "IpProtocol": "tcp",
                         "FromPort": "6379",
                         "ToPort": "6379",
+                        "SourceSecurityGroupId": { "Ref": "IntLBSG" }
+                    },
+                    {
+                        "IpProtocol": "tcp",
+                        "FromPort": "80",
+                        "ToPort": "80",
                         "SourceSecurityGroupId": { "Ref": "IntLBSG" }
                     },
                     {

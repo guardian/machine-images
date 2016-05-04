@@ -63,6 +63,9 @@ if [ ! -z "${INSTALL_FROM_LOCAL}" ]; then
 fi
 
 ${DIR}/install.sh -t ${GITHUB_TEAM_NAME} -b ${GITHUB_KEYS_BUCKET}
-echo "*/30 * * * * /opt/features/ssh-keys/install.sh -b ${GITHUB_KEYS_BUCKET} -t ${GITHUB_TEAM_NAME}" > ${DIR}/ssh-keys-cron-job.txt
+cat > ${DIR}/ssh-keys-cron-job.txt << EOF
+PATH=/bin:/usr/bin:/usr/local/bin
+*/30 * * * * /opt/features/ssh-keys/install.sh -b ${GITHUB_KEYS_BUCKET} -t ${GITHUB_TEAM_NAME} > ~${SSH_USER}/last-ssh-update.log 2>&1
+EOF
 echo "Initialising cron job"
 crontab -u ${SSH_USER} ${DIR}/ssh-keys-cron-job.txt
