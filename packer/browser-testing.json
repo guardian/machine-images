@@ -1,0 +1,61 @@
+{
+  "variables": {
+    "build_number": "DEV",
+    "build_name": null,
+    "build_vcs_ref": "",
+    "account_numbers": "",
+    "build_branch": "DEV",
+    "euw1_source_ami": "ami-b6b73dc5",
+    "instance_profile": "PackerUser-PackerInstanceProfile-O1WXS2KZ0LV1",
+    "vpc_id": "",
+    "subnet_id": ""
+  },
+  "builders": [
+    {
+      "name": "browser-testing",
+      "type": "amazon-ebs",
+      "region": "eu-west-1",
+      "source_ami": "{{user `euw1_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "vpc_id": "{{user `vpc_id`}}",
+      "subnet_id": "{{user `subnet_id`}}",
+      "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
+      "ami_name": "browser-testing_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+      "ami_description": "AMI for browser-testing built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
+      "ami_users": "{{user `account_numbers`}}",
+      "tags": {
+        "Name": "browser-testing_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "ImageName": "browser-testing",
+        "BuildName": "{{user `build_name`}}",
+        "Build":"{{user `build_number`}}",
+        "Branch":"{{user `build_branch`}}",
+        "VCSRef":"{{user `build_vcs_ref`}}",
+        "SourceAMI":"{{user `euw1_source_ami`}}"
+      }
+    }
+  ],
+
+  "provisioners" : [
+    {
+      "type": "file",
+      "source": "resources/features",
+      "destination": "/tmp"
+    },
+    {
+      "type": "shell",
+      "script": "resources/ubuntu-wily.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "resources/install-java8.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    },
+    {
+      "type": "shell",
+      "script": "resources/features/browser-testing/install.sh",
+      "execute_command": "{{ .Vars }} sudo -E bash -x '{{ .Path }}'"
+    }
+  ]
+}
