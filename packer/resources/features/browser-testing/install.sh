@@ -3,8 +3,6 @@
 
 set +e
 
-echo "Environment=DBUS_SESSION_BUS_ADDRESS=/dev/null" >> /lib/systemd/system/dbus.service
-
 echo "Install & setup Xvfb"
 apt-get install -y xvfb
 
