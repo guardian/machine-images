@@ -11,7 +11,7 @@ KIBANA_VERSION=4.5.1
 
 ## Add repositories we are going to use
 wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
-echo "deb http://packages.elastic.co/elasticsearch/2.3/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
+echo "deb https://packages.elastic.co/elasticsearch/2.x/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
 echo "deb http://packages.elastic.co/logstash/1.5/debian stable main" > /etc/apt/sources.list.d/logstash.list
 
 ## Update index and install packages
