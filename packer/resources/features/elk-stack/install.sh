@@ -65,6 +65,7 @@ mv /opt/kibana-${KIBANA_VERSION}-linux-x64 /opt/kibana
 
 useradd -M -r -U -s /bin/false -d /opt/kibana kibana
 mkdir /var/log/kibana
+chown -R kibana:kibana /opt/kibana
 chown kibana:kibana /var/log/kibana
 cp $FEATURE_ROOT/systemd-kibana.service /etc/systemd/system/kibana.service
 
