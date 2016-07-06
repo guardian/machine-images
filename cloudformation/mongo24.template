@@ -37,6 +37,10 @@
       "Type": "AWS::EC2::SecurityGroup::Id",
       "Description": "Security group allowed to access port 27017 as clients"
     },
+    "VulnerabilityScanningSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup::Id",
+      "Description": "Security group that grants access to the account's Vulnerability Scanner"
+    },
     "VpcId": {
       "Description": "ID of the VPC onto which to launch the application eg. vpc-1234abcd",
       "Type": "AWS::EC2::VPC::Id"
@@ -471,6 +475,9 @@
           },
           {
             "Ref": "ClientSecurityGroup"
+          },
+          {
+            "Ref": "VulnerabilityScanningSecurityGroup"
           }
         ],
         "InstanceType": { "Ref": "InstanceType" },
