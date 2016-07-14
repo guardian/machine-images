@@ -11,7 +11,7 @@ wget -q https://dl.google.com/linux/direct/google-chrome-stable_current_amd64.de
 dpkg -i /tmp/google-chrome-stable_current_amd64.deb
 apt-get install -f -y
 
-echo "Install Chromedriver 2.21"
+echo "Install Chromedriver 2.22"
 wget -q -O /tmp/chromedriver.zip http://chromedriver.storage.googleapis.com/2.22/chromedriver_linux64.zip && unzip /tmp/chromedriver.zip chromedriver -d /usr/local/bin/;
 chmod 751 /usr/local/bin/chromedriver
 
