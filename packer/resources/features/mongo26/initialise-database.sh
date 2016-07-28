@@ -53,13 +53,15 @@ if [ -z "${BUCKET}" ]; then
     exit 1
 fi
 
-PROPERTIES_FILE="tmp.properties"
+PROPERTIES_FILE="${DIR}/tmp.properties"
 
 aws s3 cp "s3://${BUCKET}/${STACK}/${APP}/${STAGE}.properties" ${PROPERTIES_FILE} --region ${REGION}
 
 DATABASE_NAME=
 DATABASE_USER=
 DATABASE_PWD=
+ADMIN_USER=
+ADMIN_PWD=
 
 # read file line by line and populate the array
 while IFS='=' read -r k v; do
@@ -75,15 +77,30 @@ while IFS='=' read -r k v; do
    then
     DATABASE_PWD=$v
    fi
+   if [ "$k" == "mongo.admin.username" ]
+   then
+    ADMIN_USER=$v
+   fi
+   if [ "$k" == "mongo.admin.password" ]
+   then
+    ADMIN_PWD=$v
+   fi
 
 done < $PROPERTIES_FILE
 
-if [ -z "${DATABASE_NAME}"  -o -z  "${DATABASE_USER}" -o -z "${DATABASE_PWD}" ]; then
-    echo "One or more of database name, user and password is missing. Exiting."
+if [ -z "${DATABASE_NAME}"  -o -z  "${DATABASE_USER}" -o -z "${DATABASE_PWD}" -o -z "${ADMIN_USER}" -o -z "${ADMIN_PWD}"]; then
+    echo "One or more of properties is missing, check script. Exiting."
     exit 1
 fi
 
+# chown the data and log
+chown mongodb /var/lib/mongodb
+chown mongodb:mongodb /var/log/mongodb
+
+
 mongo <<EOF
+use admin
+db.createUser({ user: "$ADMIN_USER", pwd: "$ADMIN_PWD", roles: ["userAdminAnyDatabase"] })
 use $DATABASE_NAME
 db.createUser({user: "$DATABASE_USER", pwd: "$DATABASE_PWD", roles: ["readWrite"]});
 EOF
