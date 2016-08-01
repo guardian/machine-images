@@ -85,7 +85,6 @@ while IFS='=' read -r k v; do
    then
     ADMIN_PWD=$v
    fi
-
 done < $PROPERTIES_FILE
 
 if [ -z "${DATABASE_NAME}"  -o -z  "${DATABASE_USER}" -o -z "${DATABASE_PWD}" -o -z "${ADMIN_USER}" -o -z "${ADMIN_PWD}"]; then
@@ -101,6 +100,8 @@ chown mongodb:mongodb /var/log/mongodb
 mongo <<EOF
 use admin
 db.createUser({ user: "$ADMIN_USER", pwd: "$ADMIN_PWD", roles: ["userAdminAnyDatabase"] })
+db.auth("$ADMIN_USER", "$ADMIN_PWD")
+db.runCommand({authSchemaUpgrade: 1 });
 use $DATABASE_NAME
 db.createUser({user: "$DATABASE_USER", pwd: "$DATABASE_PWD", roles: ["readWrite"]});
 EOF
