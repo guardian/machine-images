@@ -36,6 +36,30 @@
       }
     },
     {
+      "name": "mongo26",
+      "type": "amazon-ebs",
+      "region": "eu-west-1",
+      "source_ami": "{{user `euw1_source_ami`}}",
+      "instance_type": "t2.micro",
+      "ssh_username": "ubuntu",
+      "vpc_id": "{{user `vpc_id`}}",
+      "subnet_id": "{{user `subnet_id`}}",
+      "run_tags": {"Stage":"INFRA", "Stack":"packer", "App": "{{user `build_name`}}"},
+      "ami_name": "mongo26_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+      "ami_description": "AMI for mongo26 built by TeamCity: {{user `build_name`}}#{{user `build_number`}}",
+      "ami_users": "{{user `account_numbers`}}",
+      "iam_instance_profile": "{{user `instance_profile`}}",
+      "tags": {
+        "Name": "mongo26_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
+        "ImageName": "mongo26",
+        "BuildName": "{{user `build_name`}}",
+        "Build":"{{user `build_number`}}",
+        "Branch":"{{user `build_branch`}}",
+        "VCSRef":"{{user `build_vcs_ref`}}",
+        "SourceAMI":"{{user `euw1_source_ami`}}"
+      }
+    },
+    {
       "name": "mongo-opsmanager",
       "type": "amazon-ebs",
       "region": "eu-west-1",
@@ -103,6 +127,14 @@
         "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo24/install.sh"
       ],
       "only": ["mongo24"]
+    },
+    {
+      "type": "shell",
+      "inline": [
+        "/bin/sleep 2",
+        "/usr/bin/sudo -E /bin/bash -x /opt/features/mongo26/install.sh"
+      ],
+      "only": ["mongo26"]
     },
     {
       "type": "shell",
