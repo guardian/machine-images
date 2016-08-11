@@ -92,10 +92,19 @@ if [ -z "${DATABASE_NAME}"  -o -z  "${DATABASE_USER}" -o -z "${DATABASE_PWD}" -o
     exit 1
 fi
 
+# Install the config file to /etc/mongod.conf
+CONFIG_FILE=/etc/mongod.conf
+cp ${CONFIG_FILE} ${CONFIG_FILE}.original
+install -m 644 -o root -g root ${SCRIPTPATH}/mongod.conf ${CONFIG_FILE}
+
 # chown the data and log
 chown mongodb /var/lib/mongodb
 chown mongodb:mongodb /var/log/mongodb
 
+# Restart mongod
+service mongod restart
+
+sleep 5
 
 mongo <<EOF
 use admin
