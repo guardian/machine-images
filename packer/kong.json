@@ -26,6 +26,7 @@
       "ami_users": "{{user `account_numbers`}}",
       "iam_instance_profile": "{{user `instance_profile`}}",
       "tags": {
+        "BuiltBy": "machine-images",
         "Name": "kong_{{user `build_number`}}_{{isotime \"2006/01/02_15-04-05\"}}",
         "ImageName": "kong",
         "BuildName": "{{user `build_name`}}",
