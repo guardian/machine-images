@@ -13,10 +13,8 @@ function HELP {
                   stack, stage and app tags.
 
     -a app        The name of the app, which is assumed to correspond to the name of 
-									deb file. This defaults to the
-                  'App' tag but can be overriden here. It should match the app
-                  name in the SBT build config.
-
+									deb file. This defaults to the 'App' tag but can be overriden here. 
+	
     -h            Displays this help message. No further functions are
                   performed.
 
@@ -67,7 +65,7 @@ fi
 # Install an application that was packaged by the sbt-native-packager
 # download
 LOCAL_DEB=$(mktemp --suffix=".${TYPE}" /tmp/app-deb.XXXXXX)
-aws s3 cp "s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP}_1.0_all.deb" \
+aws s3 cp "s3://${BUCKET}/${STACK}/${STAGE}/${APP}/${APP_NAME}.deb" \
 					"${LOCAL_DEB}" --region ${REGION}
 
 dpkg -i $LOCAL_DEB
