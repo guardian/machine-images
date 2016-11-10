@@ -698,6 +698,10 @@
     },
 
     "Outputs": {
+        "MultimediaKinesisSenderRole": {
+            "Description" : "The name of the MultimediaKinesisSenderRole",
+            "Value" : { "Ref" : "MultimediaKinesisSenderRole" }
+        },
         "MediaServiceKinesisSenderRole": {
             "Description" : "The name of the MediaServiceKinesisSenderRole",
             "Value" : { "Ref" : "MediaServiceKinesisSenderRole" }
