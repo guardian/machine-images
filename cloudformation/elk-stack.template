@@ -94,6 +94,10 @@
             "Description": "The KMS CMK to use to encrypt the EBS volume",
             "Type": "String"
         },
+        "MultimediaAccountId": {
+            "Description": "The AWS account ID for the Media Service",
+            "Type": "String"
+        },
         "MediaServiceAccountId": {
             "Description": "The AWS account ID for the Media Service",
             "Type": "String"
@@ -125,6 +129,24 @@
     },
 
     "Resources": {
+
+        "MultimediaKinesisSenderRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "Path": "/",
+                "AssumeRolePolicyDocument": {
+                    "Statement": [
+                        {
+                            "Action": "sts:AssumeRole",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": { "Fn::Join": [ "", [ "arn:aws:iam::", { "Ref": "MultimediaAccountId" }, ":root" ] ] }
+                            }
+                        }
+                    ]
+                }
+            }
+        },
 
         "MediaServiceKinesisSenderRole": {
             "Type": "AWS::IAM::Role",
@@ -676,6 +698,10 @@
     },
 
     "Outputs": {
+        "MultimediaKinesisSenderRole": {
+            "Description" : "The name of the MultimediaKinesisSenderRole",
+            "Value" : { "Ref" : "MultimediaKinesisSenderRole" }
+        },
         "MediaServiceKinesisSenderRole": {
             "Description" : "The name of the MediaServiceKinesisSenderRole",
             "Value" : { "Ref" : "MediaServiceKinesisSenderRole" }
