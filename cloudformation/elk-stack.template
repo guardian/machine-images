@@ -95,7 +95,7 @@
             "Type": "String"
         },
         "MultimediaAccountId": {
-            "Description": "The AWS account ID for the Media Service",
+            "Description": "The AWS account ID for Multimedia",
             "Type": "String"
         },
         "MediaServiceAccountId": {
