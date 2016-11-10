@@ -214,8 +214,11 @@
                     ]
                 },
                 "Roles": [ {
-                    "Ref": "MediaServiceKinesisSenderRole"
-                } ]
+			"Ref": "MultimediaKinesisSenderRole"
+		},
+		{
+			"Ref": "MediaServiceKinesisSenderRole"
+		} ]
             }
         },
 
