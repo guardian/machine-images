@@ -239,7 +239,7 @@
                     { "Ref": "MultimediaKinesisSenderRole" },
                     { "Ref": "MediaServiceKinesisSenderRole" },
                     { "Ref": "WorkflowKinesisSenderRole" }
-		        ]
+                ]
             }
         },
 
