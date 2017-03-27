@@ -489,6 +489,7 @@
                     { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
                   ]
                 },
+                "rm -rf /opt/aws-scripts-mon\n",
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", { "Ref" : "DatabaseVolumeSize" }, " -d f -m /var/lib/mongodb -o 'defaults,noatime' -u mongodb -x -t io1 -i ", {"Ref":"IOPS"}, " -k ", { "Ref": "CustomerMasterKey" }] ] }, "\n",
                 "/opt/features/mongo24/configure.sh --zone_visibility_mask '", { "Ref": "MemberVisibilityMask" } ,"'\n"
               ]
