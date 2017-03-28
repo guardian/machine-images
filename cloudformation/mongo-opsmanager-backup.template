@@ -80,6 +80,10 @@
       "Description": "Bucket to store team public keys in (used to encrypt backup)",
       "Type": "String",
       "Default": "flex-mongo-snapshots-backup-public-keys"
+    },
+    "PagerDutyServiceKey" : {
+      "Description": "A service key so that alarms can be sent if the backup job is not running",
+      "Type": "String"
     }
   },
   "Conditions" : {
@@ -470,6 +474,8 @@
               [
                 "#!/bin/bash -ev",
 
+                { "Fn::Join": [ "", ["/opt/features/pagerduty/install.sh -k ", {"Ref": "PagerDutyServiceKey"}] ]},
+
                 { "Fn::If" : [
                     "DoNotRetrieveSshKeysFromS3",
                     "# Not retrieving SSH keys from S3",
@@ -479,8 +485,7 @@
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", {"Ref":"BackupVolumeSize"}, " -d f -m /backup -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
 
                 "/opt/features/mongo-opsmanager/backup-agent-configure.sh",
-                { "Fn::Join": [ "", ["echo '*/30 * * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "' > /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"] ] },
-                "crontab -u mongo-backup /opt/features/mongo-opsmanager/backup-agent-cron-job.txt"
+                { "Fn::Join": [ "", ["/opt/features/alarming-crontab/install.sh -u ubuntu -d 'Snapshot backup cron task' -c '*/30 * * * * /opt/features/mongo-opsmanager/scripts/snapshot_backup.rb -b ", {"Ref":"SnapshotBackupBucketName"}, " -k ", { "Ref": "SnapshotBackupPublicKeysBucketName" }, "'"] ] }
               ]
             ]
           }
