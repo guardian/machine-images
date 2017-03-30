@@ -7,11 +7,11 @@ set -e
 
 FEATURE_ROOT=/opt/features/elk-stack
 
-KIBANA_VERSION=4.1.1
+KIBANA_VERSION=4.5.1
 
 ## Add repositories we are going to use
 wget -qO - https://packages.elastic.co/GPG-KEY-elasticsearch | apt-key add -
-echo "deb http://packages.elastic.co/elasticsearch/1.7/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
+echo "deb https://packages.elastic.co/elasticsearch/2.x/debian stable main" > /etc/apt/sources.list.d/elasticsearch.list
 echo "deb http://packages.elastic.co/logstash/1.5/debian stable main" > /etc/apt/sources.list.d/logstash.list
 
 ## Update index and install packages
@@ -31,11 +31,10 @@ crontab -u root - << EOM
 EOM
 
 ## Install Elasticsearch plugins
-/usr/share/elasticsearch/bin/plugin --install elasticsearch/elasticsearch-cloud-aws/2.7.0
-/usr/share/elasticsearch/bin/plugin --install mobz/elasticsearch-head
-/usr/share/elasticsearch/bin/plugin --install lukas-vlcek/bigdesk
-/usr/share/elasticsearch/bin/plugin --install karmi/elasticsearch-paramedic
-/usr/share/elasticsearch/bin/plugin --install royrusso/elasticsearch-HQ
+/usr/share/elasticsearch/bin/plugin install cloud-aws
+/usr/share/elasticsearch/bin/plugin install mobz/elasticsearch-head
+/usr/share/elasticsearch/bin/plugin install karmi/elasticsearch-paramedic
+/usr/share/elasticsearch/bin/plugin install royrusso/elasticsearch-HQ
 
 ## Install the curator
 pip install elasticsearch-curator
@@ -66,6 +65,7 @@ mv /opt/kibana-${KIBANA_VERSION}-linux-x64 /opt/kibana
 
 useradd -M -r -U -s /bin/false -d /opt/kibana kibana
 mkdir /var/log/kibana
+chown -R kibana:kibana /opt/kibana
 chown kibana:kibana /var/log/kibana
 cp $FEATURE_ROOT/systemd-kibana.service /etc/systemd/system/kibana.service
 

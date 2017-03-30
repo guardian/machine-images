@@ -202,12 +202,12 @@ bootstrap.mlockall: true
 
 # Set the bind address specifically (IPv4 or IPv6):
 #
-# network.bind_host: 192.168.0.1
+network.bind_host: 0.0.0.0
 
 # Set the address other nodes will use to communicate with this node. If not
 # set, it is automatically derived. It must point to an actual IP address.
 #
-# network.publish_host: 192.168.0.1
+network.publish_host: _ec2:privateIp_
 
 # Set both 'bind_host' and 'publish_host':
 #
@@ -232,9 +232,6 @@ bootstrap.mlockall: true
 # Disable HTTP completely:
 #
 # http.enabled: false
-
-http.host: 127.0.0.1
-
 
 ################################### Gateway ###################################
 
@@ -345,7 +342,7 @@ discovery.type: ec2
 discovery.ec2.tag.Stack: "@@STACK"
 discovery.ec2.tag.App: "@@APP"
 
-cloud.aws.region: @@REGION
+cloud.aws.region: "@@REGION"
 
 # GCE discovery allows to use Google Compute Engine API in order to perform discovery.
 #
@@ -393,7 +390,7 @@ cloud.aws.region: @@REGION
 action.auto_create_index: true
 action.disable_delete_all_indices: true
 
-script.disable_dynamic: true
-
 ## Add breaker settings (to prevent out of memory errors)
 indices.breaker.fielddata.limit: 40%
+
+cloud.node.auto_attributes: true
