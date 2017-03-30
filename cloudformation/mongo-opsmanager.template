@@ -6,28 +6,18 @@
       "Description": "The EC2 Key Pair to allow SSH access to the instance",
       "Type": "AWS::EC2::KeyPair::KeyName"
     },
-    "SshKeyFileS3Url": {
-      "Description": "S3 URL for a list of public SSH keys to use for the default ubuntu user",
-      "Type": "String",
-      "Default": ""
+    "GitHubTeamName": {
+      "Description": "Name of GitHub team to install SSH keys for",
+      "Type": "String"
     },
     "SSHAccessCIDR": {
       "Description": "IP address range allowed to SSH to the MongoDB instances",
       "Type": "String",
       "Default": "10.249.0.0/16"
     },
-    "ReplicationSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::Id",
-      "Description": "Security group allowed to access port 27017 for replication"
-    },
-    "ClientSecurityGroup": {
-      "Type": "AWS::EC2::SecurityGroup::Id",
-      "Description": "Security group allowed to access port 27017 as clients"
-    },
     "DatabaseVolumeSize": {
       "Description": "Size of EBS volume for MongoDB data files (GB)",
-      "Type": "Number",
-      "Default": "100"
+      "Type": "Number"
     },
     "DiskSpaceUtilisationAlertThreshold": {
       "Description": "Percentage of disk utilisation to trigger an alert for. E.g. 50 for alerting when any disk is at >= 50% capacity.",
@@ -86,7 +76,7 @@
     "EBSOptions": {
       "Description": "Extra parameters to add-encrypted script",
       "Type": "String",
-      "Default": "-t io1 -i 1000"
+      "Default": "-t gp2"
     },
     "InstanceType": {
       "Description": "The instance type for the database nodes (typically smaller for prePROD)",
@@ -96,11 +86,10 @@
         "m4.xlarge",
         "r3.xlarge"
       ]
-    }
-  },
-  "Conditions" : {
-    "DoNotRetrieveSshKeysFromS3" : {
-      "Fn::Equals" : [ {"Ref" : "SshKeyFileS3Url"}, "" ]
+    },
+    "TemporaryAccessCIDR": {
+      "Description": "A CIDR block that can access the mongo instances (prior to adding the security group to the API / Backup). This should be removed after transition.",
+      "Type": "String"
     }
   },
   "Resources": {
@@ -246,7 +235,7 @@
               ],
               "Effect": "Allow",
               "Resource": { "Ref": "CustomerMasterKey"}
-            }
+              }
           ]
         },
         "Roles": [{"Ref": "ServerRole"}]
@@ -366,6 +355,27 @@
         ]
       }
     },
+    "GetTeamKeysPolicy": {
+      "Type": "AWS::IAM::Policy",
+      "Properties": {
+        "PolicyName": "GetTeamKeysPolicy",
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": ["s3:GetObject"],
+              "Resource": ["arn:aws:s3:::github-team-keys/*"]
+            },
+            {
+              "Effect": "Allow",
+              "Action": ["s3:ListBucket"],
+              "Resource": "arn:aws:s3:::github-team-keys"
+            }
+          ]
+        },
+        "Roles": [{"Ref": "ServerRole"}]
+      }
+    },
     "SSHSecurityGroup": {
       "Type": "AWS::EC2::SecurityGroup",
       "Properties": {
@@ -379,6 +389,65 @@
             "FromPort": "22",
             "ToPort": "22",
             "CidrIp": { "Ref": "SSHAccessCIDR"}
+          }
+        ]
+      }
+    },
+    "ReplicationSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow connections to mongo DB",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "CidrIp": "10.0.0.0/8"
+          }
+        ]
+      }
+    },
+    "ReplicationSecurityGroupIngress": {
+      "Type": "AWS::EC2::SecurityGroupIngress",
+      "Properties": {
+        "GroupId": { "Fn::GetAtt": [ "ReplicationSecurityGroup", "GroupId" ] },
+        "IpProtocol": "tcp",
+        "FromPort": "27017",
+        "ToPort": "27017",
+        "SourceSecurityGroupId": { "Fn::GetAtt": [ "ReplicationSecurityGroup", "GroupId" ] }
+      }
+    },
+    "MongoAccessSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allows connections to the mongo replica set",
+        "VpcId": {
+          "Ref": "VpcId"
+        }
+      }
+    },
+    "AccessSecurityGroup": {
+      "Type": "AWS::EC2::SecurityGroup",
+      "Properties": {
+        "GroupDescription": "Allow connections to the replica set",
+        "VpcId": {
+          "Ref": "VpcId"
+        },
+        "SecurityGroupIngress": [
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "CidrIp": {"Ref": "TemporaryAccessCIDR"}
+          },
+          {
+            "IpProtocol": "tcp",
+            "FromPort": "27017",
+            "ToPort": "27017",
+            "SourceSecurityGroupId": { "Ref": "MongoAccessSecurityGroup"}
           }
         ]
       }
@@ -459,7 +528,7 @@
             "Ref": "ReplicationSecurityGroup"
           },
           {
-            "Ref": "ClientSecurityGroup"
+            "Ref": "AccessSecurityGroup"
           }
         ],
         "InstanceType": { "Ref": "InstanceType" },
@@ -473,12 +542,7 @@
               [
                 "#!/bin/bash -ev",
 
-                { "Fn::If" : [
-                    "DoNotRetrieveSshKeysFromS3",
-                    "# Not retrieving SSH keys from S3",
-                    { "Fn::Join": [ "", ["/opt/features/ssh-keys/install.sh -k ", { "Ref": "SshKeyFileS3Url" }, " -u ubuntu", "\n" ]] }
-                  ]
-                },
+                { "Fn::Join": [ "", ["/opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -t ", { "Ref": "GitHubTeamName" }, " -b github-team-keys || true" ]] },
                 { "Fn::Join": [ "", ["/opt/features/ebs/add-encrypted.sh -s ", {"Ref":"DatabaseVolumeSize"}, " -d f -m /var/lib/mongodb -o 'defaults,noatime' -x ", {"Ref":"EBSOptions"}, " -k ", { "Ref": "CustomerMasterKey" }] ] },
 
                 "/opt/features/mongo-opsmanager/agent-configure.sh"
@@ -487,6 +551,12 @@
           }
         }
       }
+    }
+  },
+  "Outputs": {
+    "AccessSecurityGroup": {
+      "Description": "The security group that instances should to access the mongo instances",
+      "Value" : {"Ref": "MongoAccessSecurityGroup"}
     }
   }
 }
