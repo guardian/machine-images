@@ -84,7 +84,8 @@
       "AllowedValues": [
         "m4.large",
         "m4.xlarge",
-        "r3.xlarge"
+        "r3.xlarge",
+        "r4.xlarge"
       ]
     },
     "TemporaryAccessCIDR": {
