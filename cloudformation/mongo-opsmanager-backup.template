@@ -20,7 +20,7 @@
       "Description": "The instance type for the backup node(s) (typically smaller for prePROD)",
       "Type": "String",
       "AllowedValues": [
-        "m3.medium",
+        "m4.medium",
         "m4.large",
         "m4.xlarge",
         "r3.xlarge"
