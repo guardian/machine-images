@@ -10,7 +10,7 @@ Parameters:
   SSHKeyBucket:
     Description: Name of S3 bucket to fetch the Github team keys from
     Type: String
-    Default: github-team-keys
+    Default: github-public-keys
   SSHAccessCIDR:
     Description: IP address range allowed to SSH to the MongoDB instances
     Type: String
