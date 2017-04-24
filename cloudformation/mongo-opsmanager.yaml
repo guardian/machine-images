@@ -7,6 +7,10 @@ Parameters:
   GitHubTeamName:
     Description: Name of GitHub team to install SSH keys for
     Type: String
+  SSHKeyBucket:
+    Description: Name of S3 bucket to fetch the Github team keys from
+    Type: String
+    Default: github-team-keys
   SSHAccessCIDR:
     Description: IP address range allowed to SSH to the MongoDB instances
     Type: String
@@ -231,12 +235,11 @@ Resources:
         - Effect: Allow
           Action:
           - s3:GetObject
-          Resource:
-          - arn:aws:s3:::github-team-keys/*
+          Resource: !Sub arn:aws:s3:::${SSHKeyBucket}/*
         - Effect: Allow
           Action:
           - s3:ListBucket
-          Resource: arn:aws:s3:::github-team-keys
+          Resource: !Sub arn:aws:s3:::${SSHKeyBucket}
       Roles:
       - !Ref ServerRole
   SSHSecurityGroup:
@@ -326,7 +329,7 @@ Resources:
           !Sub |
             #!/bin/bash -ev
 
-            /opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -t ${GitHubTeamName} -b github-team-keys || true
+            /opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -t ${GitHubTeamName} -b ${SSHKeyBucket} || true
             /opt/features/ebs/add-encrypted.sh -s ${DatabaseVolumeSize} -d f -m /var/lib/mongodb -o ''defaults,noatime'' -x ${EBSOptions} -k ${CustomerMasterKey}
 
             /opt/features/mongo-opsmanager/agent-configure.sh
