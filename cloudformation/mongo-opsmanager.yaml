@@ -239,9 +239,7 @@ Resources:
         - Effect: Allow
           Action:
           - s3:ListBucket
-          Resource: 
-          - !Sub arn:aws:s3:::${SSHKeyBucket}
-          - !Sub arn:aws:s3:::${SSHKeyBucket}/*
+          Resource: !Sub arn:aws:s3:::${SSHKeyBucket}
       Roles:
       - !Ref ServerRole
   SSHSecurityGroup:
