@@ -1,0 +1,340 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: MongoDB replica set nodes
+Parameters:
+  KeyName:
+    Description: The EC2 Key Pair to allow SSH access to the instance
+    Type: AWS::EC2::KeyPair::KeyName
+  GitHubTeamName:
+    Description: Name of GitHub team to install SSH keys for
+    Type: String
+  SSHKeyBucket:
+    Description: Name of S3 bucket to fetch the Github team keys from
+    Type: String
+    Default: github-public-keys
+  SSHAccessCIDR:
+    Description: IP address range allowed to SSH to the MongoDB instances
+    Type: String
+    Default: 10.249.0.0/16
+  DatabaseVolumeSize:
+    Description: Size of EBS volume for MongoDB data files (GB)
+    Type: Number
+  DiskSpaceUtilisationAlertThreshold:
+    Description: Percentage of disk utilisation to trigger an alert for. E.g. 50 for
+      alerting when any disk is at >= 50% capacity.
+    Type: Number
+    MinValue: 10
+    MaxValue: 100
+    Default: 50
+  MemoryUtilisationAlertThreshold:
+    Description: Percentage of memory utilisation to trigger an alert for within 5
+      minute period. E.g. 90 for alerting when memory is at >= 90% for 5 minutes.
+    Type: Number
+    MinValue: 10
+    MaxValue: 100
+    Default: 90
+  MongoPagerDutyEndPoint:
+    Description: PagerDuty HTTPS end-point to use for alerting
+    Type: String
+    AllowedPattern: https://.*
+  Stage:
+    Description: Environment name
+    Type: String
+    AllowedValues:
+    - CODE
+    - QA
+    - RELEASE
+    - PROD
+  Stack:
+    Description: Stack name
+    Type: String
+  VpcId:
+    Description: ID of the VPC onto which to launch the application eg. vpc-1234abcd
+    Type: AWS::EC2::VPC::Id
+  PrivateVpcSubnets:
+    Description: Subnets to use in VPC for private EC2 instances eg. subnet-abcd1234
+    Type: List<AWS::EC2::Subnet::Id>
+  MachineImagesAMI:
+    Description: AMI id from the machine-images repo
+    Type: String
+  Size:
+    Description: Size of ASG
+    Type: Number
+    Default: 3
+  CustomerMasterKey:
+    Description: The KMS CMK to use to encrypt the EBS volume
+    Type: String
+  EBSOptions:
+    Description: Extra parameters to add-encrypted script
+    Type: String
+    Default: -t gp2
+  InstanceType:
+    Description: The instance type for the database nodes (typically smaller for prePROD)
+    Type: String
+    AllowedValues:
+    - m4.large
+    - m4.xlarge
+    - r3.xlarge
+    - r4.xlarge
+  TemporaryAccessCIDR:
+    Description: A CIDR block that can access the mongo instances (prior to adding
+      the security group to the API / Backup). This should be removed after transition.
+    Type: String
+Resources:
+  AlarmHighDataDiskSpaceUtilisation:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: 'MongoDB: Too high disk utilisation on /var/lib/mongodb for a 5 minute period'
+      Namespace: System/Linux
+      MetricName: DiskSpaceUtilization
+      Statistic: Maximum
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: !Ref 'DiskSpaceUtilisationAlertThreshold'
+      Period: 300
+      EvaluationPeriods: 1
+      AlarmActions:
+      - !Ref TopicPagerDutyAlerts
+      Dimensions:
+      - Name: MountPath
+        Value: /var/lib/mongodb
+      - Name: Filesystem
+        Value: /dev/xvdf
+      - Name: AutoScalingGroupName
+        Value: !Ref AutoscalingGroup
+  AlarmHighMemoryUtilization:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: 'MongoDB: Memory utilisation has been unusually high in the last 5 minutes'
+      Namespace: System/Linux
+      MetricName: MemoryUtilization
+      Statistic: Maximum
+      ComparisonOperator: GreaterThanOrEqualToThreshold
+      Threshold: !Ref MemoryUtilisationAlertThreshold
+      Period: 300
+      EvaluationPeriods: 1
+      AlarmActions:
+      - !Ref TopicPagerDutyAlerts
+      Dimensions:
+      - Name: AutoScalingGroupName
+        Value: !Ref AutoscalingGroup
+  TopicPagerDutyAlerts:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: !Sub MongoPagerDutyEndPoint-${Stage}-${Stack}
+      Subscription:
+      - Endpoint: !Ref MongoPagerDutyEndPoint
+        Protocol: https
+  ServerInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Path: /
+      Roles:
+      - !Ref ServerRole
+  ServerRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - ec2.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: /
+  DescribeEC2Policy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: DescribeEC2Policy
+      PolicyDocument:
+        Statement:
+        - Action:
+          - EC2:Describe*
+          - elasticloadbalancing:Describe*
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - cloudformation:DescribeStacks
+          Effect: Allow
+          Resource: !Ref AWS::StackId
+      Roles:
+      - !Ref ServerRole
+  CreateEncryptedVolumePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CreateEncryptedVolumePolicy
+      PolicyDocument:
+        Statement:
+        - Action:
+          - ec2:CreateVolume
+          - ec2:AttachVolume
+          - ec2:CreateTags
+          - ec2:DescribeTags
+          - ec2:DescribeVolumes
+          - ec2:ModifyInstanceAttribute
+          Effect: Allow
+          Resource: '*'
+        - Action:
+          - kms:CreateGrant
+          - kms:GenerateDataKeyWithoutPlaintext
+          - kms:Decrypt
+          Effect: Allow
+          Resource: !Ref CustomerMasterKey
+      Roles:
+      - !Ref ServerRole
+  PushLogsPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: PushLogs
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - logs:*
+          Resource:
+          - arn:aws:logs:*:*:*
+      Roles:
+      - !Ref ServerRole
+  LockTablePolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: LockTable
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Action:
+          - dynamodb:DescribeTable
+          - dynamodb:CreateTable
+          - dynamodb:PutItem
+          - dynamodb:GetItem
+          - dynamodb:UpdateItem
+          Resource:
+          - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mongo-initialisation
+          - !Sub arn:aws:dynamodb:${AWS::Region}:${AWS::AccountId}:table/mongo.rsconfig.${Stack}-db-${Stage}
+      Roles:
+      - !Ref ServerRole
+  CloudwatchPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: CloudwatchPolicy
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - cloudwatch:PutMetricData
+          Resource: '*'
+      Roles:
+      - !Ref ServerRole
+  GetTeamKeysPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      PolicyName: GetTeamKeysPolicy
+      PolicyDocument:
+        Statement:
+        - Effect: Allow
+          Action:
+          - s3:GetObject
+          Resource: !Sub arn:aws:s3:::${SSHKeyBucket}/*
+        - Effect: Allow
+          Action:
+          - s3:ListBucket
+          Resource: !Sub arn:aws:s3:::${SSHKeyBucket}
+      Roles:
+      - !Ref ServerRole
+  SSHSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access from the office
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 22
+        ToPort: 22
+        CidrIp: !Ref SSHAccessCIDR
+  ReplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow connections to mongo DB
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 27017
+        ToPort: 27017
+        CidrIp: 10.0.0.0/8
+  ReplicationSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !GetAtt ReplicationSecurityGroup.GroupId
+      IpProtocol: tcp
+      FromPort: 27017
+      ToPort: 27017
+      SourceSecurityGroupId: !GetAtt ReplicationSecurityGroup.GroupId
+  MongoAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allows connections to the mongo replica set
+      VpcId: !Ref VpcId
+  AccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow connections to the replica set
+      VpcId: !Ref VpcId
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 27017
+        ToPort: 27017
+        CidrIp: !Ref TemporaryAccessCIDR
+      - IpProtocol: tcp
+        FromPort: 27017
+        ToPort: 27017
+        SourceSecurityGroupId: !Ref MongoAccessSecurityGroup
+  AutoscalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      VPCZoneIdentifier: !Ref PrivateVpcSubnets
+      LaunchConfigurationName: !Ref LaunchConfig
+      MinSize: 1
+      MaxSize: !Ref Size
+      DesiredCapacity: !Ref Size
+      Cooldown: 180
+      HealthCheckType: EC2
+      HealthCheckGracePeriod: 300
+      Tags:
+      - Key: Name
+        Value: !Sub ${Stage}:${Stack}-db
+        PropagateAtLaunch: true
+      - Key: Stage
+        Value: !Ref Stage
+        PropagateAtLaunch: true
+      - Key: Stack
+        Value: !Ref Stack
+        PropagateAtLaunch: true
+      - Key: App
+        Value: db
+        PropagateAtLaunch: true
+  LaunchConfig:
+    Type: AWS::AutoScaling::LaunchConfiguration
+    Properties:
+      KeyName: !Ref KeyName
+      ImageId: !Ref MachineImagesAMI
+      SecurityGroups:
+      - !Ref SSHSecurityGroup
+      - !Ref ReplicationSecurityGroup
+      - !Ref AccessSecurityGroup
+      InstanceType: !Ref InstanceType
+      IamInstanceProfile: !Ref ServerInstanceProfile
+      UserData: 
+        Fn::Base64:
+          !Sub |
+            #!/bin/bash -ev
+
+            /opt/features/ssh-keys/initialise-keys-and-cron-job.sh -l -t ${GitHubTeamName} -b ${SSHKeyBucket} || true
+            /opt/features/ebs/add-encrypted.sh -s ${DatabaseVolumeSize} -d f -m /var/lib/mongodb -o ''defaults,noatime'' -x ${EBSOptions} -k ${CustomerMasterKey}
+
+            /opt/features/mongo-opsmanager/agent-configure.sh
+          
+Outputs:
+  AccessSecurityGroup:
+    Description: The security group that instances should to access the mongo instances
+    Value: !Ref MongoAccessSecurityGroup
