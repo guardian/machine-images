@@ -15,6 +15,14 @@ Parameters:
     Description: IP address range allowed to SSH to the MongoDB instances
     Type: String
     Default: 10.249.0.0/16
+  CustomReplicationSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: (Optional) Custom security group allowed to access port 27017 for replication
+    Default: ''
+  CustomAccessSecurityGroup:
+    Type: AWS::EC2::SecurityGroup::Id
+    Description: (Optional) Custom security group allowed to access port 27017 as clients
+    Default: ''
   DatabaseVolumeSize:
     Description: Size of EBS volume for MongoDB data files (GB)
     Type: Number
@@ -79,6 +87,11 @@ Parameters:
     Description: A CIDR block that can access the mongo instances (prior to adding
       the security group to the API / Backup). This should be removed after transition.
     Type: String
+
+Conditions:
+  UseDefaultReplicationSecurityGroup: !Equals [!Ref CustomReplicationSecurityGroup, '']
+  UseDefaultAccessSecurityGroup: !Equals [!Ref CustomAccessSecurityGroup, '']
+
 Resources:
   AlarmHighDataDiskSpaceUtilisation:
     Type: AWS::CloudWatch::Alarm
@@ -254,6 +267,7 @@ Resources:
         CidrIp: !Ref SSHAccessCIDR
   ReplicationSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: UseDefaultReplicationSecurityGroup
     Properties:
       GroupDescription: Allow connections to mongo DB
       VpcId: !Ref VpcId
@@ -264,6 +278,7 @@ Resources:
         CidrIp: 10.0.0.0/8
   ReplicationSecurityGroupIngress:
     Type: AWS::EC2::SecurityGroupIngress
+    Condition: UseDefaultReplicationSecurityGroup
     Properties:
       GroupId: !GetAtt ReplicationSecurityGroup.GroupId
       IpProtocol: tcp
@@ -272,11 +287,13 @@ Resources:
       SourceSecurityGroupId: !GetAtt ReplicationSecurityGroup.GroupId
   MongoAccessSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: UseDefaultAccessSecurityGroup
     Properties:
       GroupDescription: Allows connections to the mongo replica set
       VpcId: !Ref VpcId
   AccessSecurityGroup:
     Type: AWS::EC2::SecurityGroup
+    Condition: UseDefaultAccessSecurityGroup
     Properties:
       GroupDescription: Allow connections to the replica set
       VpcId: !Ref VpcId
@@ -320,8 +337,14 @@ Resources:
       ImageId: !Ref MachineImagesAMI
       SecurityGroups:
       - !Ref SSHSecurityGroup
-      - !Ref ReplicationSecurityGroup
-      - !Ref AccessSecurityGroup
+      - !If 
+        - UseDefaultReplicationSecurityGroup
+        - !Ref ReplicationSecurityGroup
+        - !Ref CustomReplicationSecurityGroup
+      - !If 
+        - UseDefaultAccessSecurityGroup
+        - !Ref AccessSecurityGroup
+        - !Ref CustomAccessSecurityGroup
       InstanceType: !Ref InstanceType
       IamInstanceProfile: !Ref ServerInstanceProfile
       UserData: 
@@ -336,5 +359,6 @@ Resources:
           
 Outputs:
   AccessSecurityGroup:
+    Condition: UseDefaultAccessSecurityGroup
     Description: The security group that instances should to access the mongo instances
     Value: !Ref MongoAccessSecurityGroup
