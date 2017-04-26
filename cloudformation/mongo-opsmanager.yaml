@@ -17,11 +17,11 @@ Parameters:
     Default: 10.249.0.0/16
   CustomReplicationSecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Custom security group allowed to access port 27017 for replication (overrides default)
+    Description: (Optional) Custom security group allowed to access port 27017 for replication
     Default: ''
   CustomAccessSecurityGroup:
     Type: AWS::EC2::SecurityGroup::Id
-    Description: Custom security group allowed to access port 27017 as clients (overrides default)
+    Description: (Optional) Custom security group allowed to access port 27017 as clients
     Default: ''
   DatabaseVolumeSize:
     Description: Size of EBS volume for MongoDB data files (GB)
