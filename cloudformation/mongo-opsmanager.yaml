@@ -338,11 +338,11 @@ Resources:
       SecurityGroups:
       - !Ref SSHSecurityGroup
       - !If 
-        - !Condition UseDefaultReplicationSecurityGroup
+        - UseDefaultReplicationSecurityGroup
         - !Ref ReplicationSecurityGroup
         - !Ref CustomReplicationSecurityGroup
       - !If 
-        - !Condition UseDefaultAccessSecurityGroup
+        - UseDefaultAccessSecurityGroup
         - !Ref AccessSecurityGroup
         - !Ref CustomAccessSecurityGroup
       InstanceType: !Ref InstanceType
