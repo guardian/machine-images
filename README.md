@@ -1,3 +1,8 @@
+DEPRECATED
+==========
+
+This repository is now deprecated. The Guardian now builds AMIs via [AMIgo](https://github.com/guardian/amigo/). This is only kept for reference.
+
 Shared machine images
 =====================
 
